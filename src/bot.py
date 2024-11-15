@@ -34,16 +34,33 @@ class QuartzBot(discord.Client):
 
     async def setup_hook(self):
         """Called when the bot is starting up"""
-        log.info(f"Logged in as {self.user} (ID: {self.user.id})")
+        log.info(f"Logged in as [bold bright_green]{self.user}[/] (ID: {self.user.id})")
 
         # Add cogs
         await self.add_cog(QuartzCog(self))
 
+        # Get current command count
+        total_commands = len(list(self.tree.walk_commands()))
+
         # Sync commands with Discord
         log.info("Syncing commands...")
-        guild = discord.Object(id=self.guild_id) if self.guild_id else None
-        await self.tree.sync(guild=guild)
-        log.info("Commands synced!")
+
+        # Sync commands to the guild specified by GUILD_ID
+        if self.guild_id:
+            guild = discord.Object(id=self.guild_id)
+            synced = await self.tree.sync(guild=guild)
+            log.info(
+                f"[green]Synced {len(synced)} commands to guild: {self.guild_id} "
+                f"({total_commands} total commands)[/]"
+            )
+
+        # Sync commands globally (default behaviour)
+        else:
+            synced = await self.tree.sync(guild=None)
+            log.info(
+                f"[green]Synced {len(synced)} commands globally "
+                f"({total_commands} total commands)[/]"
+            )
 
     async def on_ready(self):
         """Called when the bot is ready and connected"""
