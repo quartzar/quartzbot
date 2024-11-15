@@ -1,25 +1,23 @@
 # quartzbot
-WIP Discord Bot written in Python
+
+*WIP Discord Bot written in Python*
 
 ### Repository structure
 
 ```
- quartzbot/
-├──  compose.yaml
-├──  Dockerfile
-├──  LICENSE
-├──  README.md
-├──  requirements
-│   ├──  base.in
-│   ├──  base.txt
-│   ├──  development.in
-│   └──  development.txt
-└──  src
-    ├──  __init__.py
-    ├── 󰌠 __pycache__
-    │   ├──  __init__.cpython-312.pyc
-    │   └──  bot.cpython-312.pyc
-    └──  bot.py
+quartzbot/
+├── compose.yaml
+├── Dockerfile
+├── LICENSE
+├── README.md
+├── requirements/
+│   ├── base.in
+│   ├── base.txt
+│   ├── development.in
+│   └── development.txt
+└── src/
+    ├── __init__.py
+    └── bot.py
 
 ```
 
@@ -28,7 +26,7 @@ WIP Discord Bot written in Python
 
 Create a `.env` file at the repository root. This is essential as otherwise the bot will be have no way of connecting to Discord. 
 
-Example `.env` file:
+Example `.env` file (also see [.env.example](.env.example)):
 ```
 DISCORD_TOKEN=foo
 GUILD_ID=bar
