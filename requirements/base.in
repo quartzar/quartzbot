@@ -1,5 +1,6 @@
 # Utility
 uv
+rich
 
 # Bot-specific
-discord.py
+discord.py[voice]
