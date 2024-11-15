@@ -43,7 +43,16 @@ source venv/bin/activate
 Preferred method is with `uv` rather than `pip`:
 ```bash
 pip install uv
-uv pip install requirements/base.txt
+uv pip install -r requirements/base.txt -r requirements/development.txt
 ```
 
+#### Updating requirements
+
+When adding new requirements, first add the package name to [base.in](requirements/base.in) or [development.in](requirements/development.in)
+
+To compile the requirements:
+```bash
+uv pip compile --generate-hashes requirements/base.in -o requirements/base.txt
+uv pip compile --generate-hashes requirements/development.in -o requirements/development.txt
+```
 
