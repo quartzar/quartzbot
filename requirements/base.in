@@ -1,6 +1,7 @@
 # Utility
 uv
 rich
+argparse
 
 # Bot-specific
 discord.py[voice]

@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import logging
 import os
@@ -21,7 +22,7 @@ load_dotenv()
 
 
 class QuartzBot(discord.Client):
-    def __init__(self, guild_id: str):
+    def __init__(self, guild_id: Optional[str] = None):
         self.guild_id = guild_id
         intents = discord.Intents.default()
         intents.message_content = True
@@ -40,8 +41,7 @@ class QuartzBot(discord.Client):
 
         # Sync commands with Discord
         log.info("Syncing commands...")
-        guild = discord.Object(id=self.guild_id)
-        self.tree.copy_global_to(guild=guild)
+        guild = discord.Object(id=self.guild_id) if self.guild_id else None
         await self.tree.sync(guild=guild)
         log.info("Commands synced!")
 
@@ -50,7 +50,7 @@ class QuartzBot(discord.Client):
         await self.change_presence(
             activity=discord.Activity(type=discord.ActivityType.watching, name="the crystals grow")
         )
-        log.info("[bold bright_green]quartz-bot is ready![/]")
+        log.info("[bold bright_green]quartzbot is ready![/]")
 
     async def add_cog(self, cog):
         """Helper method to add cogs since we're not using commands.Bot"""
@@ -81,9 +81,29 @@ class QuartzCog:
         await interaction.response.send_message(f"{greeting_type}, {name}! Nice to meet you!")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="quartzbot - A Discord bot for managing crystals")
+    parser.add_argument(
+        "--guild",
+        "-g",
+        help="Sync commands to guild specified by GUILD_ID in .env file instead of globally",
+        action="store_true",
+        default=False,
+    )
+
+    return parser.parse_args()
+
+
 async def main():
+    args = parse_args()
+    guild_id = None
+
+    # Check if guild mode was enabled
+    if args.guild:
+        log.info("[blue]Guild mode enabled[/]")
+        guild_id = os.getenv("GUILD_ID")
+
     # Create bot instance
-    guild_id = os.getenv("GUILD_ID")
     bot = QuartzBot(guild_id=guild_id)
 
     # Get token from environment
