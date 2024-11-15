@@ -23,6 +23,7 @@ Create a `.env` file at the repository root. This is essential as otherwise the 
 Example `.env` file:
 ```
 DISCORD_TOKEN=foo
+GUILD_ID=bar
 ```
 
 ### Development
@@ -38,6 +39,7 @@ Activate the virtual environment from repository root like so:
 ```bash
 source venv/bin/activate
 ```
+
 #### Install requirements
 
 Preferred method is with `uv` rather than `pip`:
@@ -56,3 +58,9 @@ uv pip compile --generate-hashes requirements/base.in -o requirements/base.txt
 uv pip compile --generate-hashes requirements/development.in -o requirements/development.txt
 ```
 
+#### Running the bot
+
+Once you have set up your dev environment, the both can be started with:
+```bash
+python src/bot.py
+```
