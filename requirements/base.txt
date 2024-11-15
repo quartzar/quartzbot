@@ -90,14 +90,10 @@ attrs==24.2.0 \
     --hash=sha256:5cfb1b9148b5b086569baec03f20d7b6bf3bcacc9a42bebf87ffaaca362f6346 \
     --hash=sha256:81921eb96de3191c8258c199618104dd27ac608d9366f5e35d011eae1867ede2
     # via aiohttp
-discord==2.3.2 \
-    --hash=sha256:cc1ee2dbe6df218ca51519af355b97e87309f8230f58c7f34885feb8e8a76145 \
-    --hash=sha256:d7959418799dd3b1e896685812d880169c193468b061b3431fa2a4664febd3da
-    # via -r requirements/base.in
 discord-py==2.4.0 \
     --hash=sha256:b8af6711c70f7e62160bfbecb55be699b5cb69d007426759ab8ab06b1bd77d1d \
     --hash=sha256:d07cb2a223a185873a1d0ee78b9faa9597e45b3f6186df21a95cec1e9bcdc9a5
-    # via discord
+    # via -r requirements/base.in
 frozenlist==1.5.0 \
     --hash=sha256:000a77d6034fbad9b6bb880f7ec073027908f1b40254b5d6f26210d2dab1240e \
     --hash=sha256:03d33c2ddbc1816237a67f66336616416e2bbb6beb306e5f890f2eb22b959cdf \

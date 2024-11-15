@@ -2,4 +2,4 @@
 uv
 
 # Bot-specific
-discord
+discord.py
