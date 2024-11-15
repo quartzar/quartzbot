@@ -1,18 +1,26 @@
 # quartzbot
 WIP Discord Bot written in Python
 
-## Repository structure
+### Repository structure
 
-```commandline
-quartzbot/
-├── src/
-│   ├── __init__.py
-│   ├── bot.py
-│   └── cogs/
-│       └── __init__.py
-├── requirements.txt
-├── Dockerfile
-└── docker-compose.yml
+```
+ quartzbot/
+├──  compose.yaml
+├──  Dockerfile
+├──  LICENSE
+├──  README.md
+├──  requirements
+│   ├──  base.in
+│   ├──  base.txt
+│   ├──  development.in
+│   └──  development.txt
+└──  src
+    ├──  __init__.py
+    ├── 󰌠 __pycache__
+    │   ├──  __init__.cpython-312.pyc
+    │   └──  bot.cpython-312.pyc
+    └──  bot.py
+
 ```
 
 ## Setup
@@ -60,7 +68,16 @@ uv pip compile --generate-hashes requirements/development.in -o requirements/dev
 
 #### Running the bot
 
-Once you have set up your dev environment, the both can be started with:
+Once you have set up your dev environment, there are 2 options for starting the bot.
+
+**Using Docker Compose (recommended):**
+```bash
+docker compose up --build
+# use `-d` to detach 
+```
+
+**Directly using local venv:**
 ```bash
 python src/bot.py
 ```
+

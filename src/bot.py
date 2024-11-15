@@ -6,7 +6,6 @@ from typing import Optional
 
 import discord
 from discord import app_commands
-from dotenv import load_dotenv
 from rich.logging import RichHandler
 
 logging.basicConfig(
@@ -17,8 +16,6 @@ logging.basicConfig(
 )
 
 log = logging.getLogger("rich")
-
-load_dotenv()
 
 
 class QuartzBot(discord.Client):

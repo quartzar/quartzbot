@@ -1,0 +1,13 @@
+services:
+  quartzbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quartzbot
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./src:/app/src
+    env_file:
+      - .env
+    command: python -m src.bot --guild
