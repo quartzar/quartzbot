@@ -24,7 +24,7 @@ services:
     volumes:
       - redict_data:/data
     expose:
-      - "6379:6379"
+      - "6379"
     healthcheck:
       test: [ "CMD", "redict-cli", "ping" ]
       interval: 5s

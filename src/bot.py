@@ -3,6 +3,8 @@ import asyncio
 import logging
 import os
 import re
+from collections import deque
+from dataclasses import dataclass
 from typing import Optional
 
 import discord
@@ -22,6 +24,14 @@ logging.basicConfig(
 )
 
 log = logging.getLogger("rich")
+
+
+@dataclass
+class QueueItem:
+    video_id: str
+    title: str
+    requested_by: str
+    url: str
 
 
 class QuartzBot(discord.Client):
@@ -59,7 +69,6 @@ class QuartzBot(discord.Client):
                 # Guild-specific sync with command clear
                 guild = discord.Object(id=self.guild_id)
                 self.tree.clear_commands(guild=guild)
-                # await self.tree.sync(guild=guild)
                 self.tree.copy_global_to(guild=guild)
                 synced = await self.tree.sync(guild=guild)
                 log.info(
@@ -93,6 +102,8 @@ class QuartzCog(commands.Cog):
         self.bot = bot
         self.cache = AudioCache()
         self.download_progress = {}
+        self.queue = deque()
+        self.currently_playing = None
         self.FFMPEG_OPTIONS = {
             "options": "-vn",  # Disable video
         }
@@ -198,7 +209,6 @@ class QuartzCog(commands.Cog):
             audio_data = self.cache.get_audio(video_id)
             title = self.cache.get_title(video_id)
 
-            yt = None
             if not audio_data:
                 # Download if not cached
                 yt = YouTube(url, on_progress_callback=self.on_progress)
@@ -209,7 +219,7 @@ class QuartzCog(commands.Cog):
                 log.info(f"Highest quality audio stream found: {stream}")
                 temp_download_path = os.path.join(self.cache.temp_dir, f"download_{video_id}.m4a")
 
-                # Initialize progress tracking
+                # Initialise progress tracking
                 self.download_progress[video_id] = {
                     "stream": stream,
                     "completed": False,
@@ -238,60 +248,159 @@ class QuartzCog(commands.Cog):
                 self.cache.cache_audio(video_id, audio_data)
                 self.cache.cache_title(video_id, title)
 
+            # Create queue item
+            queue_item = QueueItem(
+                video_id=video_id, title=title, requested_by=interaction.user.name, url=url
+            )
+
+            # Add to queue
+            self.queue.append(queue_item)
+            position = len(self.queue)
+
+            # If nothing is playing, start playback
+            if not self.currently_playing:
+                await self.play_next(interaction)
             else:
-                yt = YouTube(url)
-
-            # Extract from cache to temp file only for playback
-            temp_playback_path = os.path.join(self.cache.temp_dir, f"play_{video_id}.m4a")
-            log.info(f"Extracting audio to temporary playback file: {temp_playback_path}")
-            with open(temp_playback_path, "wb") as f:
-                f.write(audio_data)
-
-            try:
-                # Connect to voice
-                voice_channel = interaction.user.voice.channel
-                voice_client = interaction.guild.voice_client
-
-                if voice_client is None:
-                    voice_client = await voice_channel.connect()
-                elif voice_client.channel != voice_channel:
-                    await voice_client.move_to(voice_channel)
-
-                # Play audio
-                if voice_client.is_playing():
-                    voice_client.stop()
-
-                def cleanup(error):
-                    try:
-                        if os.path.exists(temp_playback_path):
-                            os.unlink(temp_playback_path)
-                            log.info(f"Cleaned up temporary playback file: {temp_playback_path}")
-                    except Exception as e:
-                        log.error(f"Cleanup error: {e}")
-                    if error:
-                        log.error(f"Player error: {error}")
-
-                voice_client.play(discord.FFmpegOpusAudio(temp_playback_path, **self.FFMPEG_OPTIONS), after=cleanup)
-
                 await interaction.followup.send(
-                    f"[**`Now playing:`** ***`{title}`***]({yt.embed_url})\n"
-                    f"`Author: {yt.author}` | `Length: {human_time_duration(yt.length)}`\n"
-                    f"`Uploaded: {yt.publish_date}` | `Views: {yt.views}`"
+                    f"Added to queue (position {position}): {title}",
                 )
-                if give_me_file:
-                    await interaction.followup.send(file=discord.File(temp_playback_path, filename=f"{title}.m4a"))
 
-            except Exception as e:
-                # Clean up temp playback file if voice connection fails
-                if os.path.exists(temp_playback_path):
-                    os.unlink(temp_playback_path)
-                raise e
+            # Send the file if user requested it
+            if give_me_file:
+                temp_file_path = os.path.join(self.cache.temp_dir, f"play_{video_id}.m4a")
+                with open(temp_file_path, "wb") as f:
+                    f.write(audio_data)
+                await interaction.followup.send(
+                    file=discord.File(temp_file_path, filename=f"{title}.m4a")
+                )
+                os.unlink(temp_file_path)
 
         except Exception as e:
             await interaction.followup.send(
                 f"An error occurred: {str(e)}",
             )
             log.error(f"An error occurred during [underline]/play[/] command: {e}")
+
+    @app_commands.command()
+    async def skip(self, interaction: discord.Interaction):
+        """Skip current song"""
+        if not interaction.guild.voice_client:
+            await interaction.response.send_message(
+                "Nothing is playing!",
+            )
+            return
+
+        await self.terminate_playback(interaction.guild.voice_client)
+        await interaction.response.send_message(
+            "Skipped current song",
+        )
+
+    @app_commands.command()
+    async def queue(self, interaction: discord.Interaction):
+        """Show current queue"""
+        if not self.currently_playing and not self.queue:
+            await interaction.response.send_message(
+                "Nothing is playing or queued",
+            )
+            return
+
+        queue_text = []
+        if self.currently_playing:
+            queue_text.append(
+                f"🎵 Now Playing: {self.currently_playing.title} (requested by {self.currently_playing.requested_by})"
+            )
+
+        if self.queue:
+            queue_text.append("\n📋 Queue:")
+            for i, item in enumerate(self.queue, 1):
+                queue_text.append(f"{i}. {item.title} (requested by {item.requested_by})")
+
+        await interaction.response.send_message(
+            "\n".join(queue_text),
+        )
+
+    """
+    UTILITY
+    """
+
+    async def terminate_playback(self, voice_client):
+        """Safely terminate current playback"""
+        if voice_client and voice_client.is_playing():
+            voice_client.stop()
+            # Wait a brief moment for FFmpeg to clean up
+            await asyncio.sleep(0.5)
+            return True
+        return False
+
+    async def play_next(self, interaction: discord.Interaction):
+        """Play next item in queue"""
+        if not self.queue:
+            self.currently_playing = None
+            return
+
+        next_item = self.queue.popleft()
+        await self.play_audio(interaction, next_item)
+
+    async def play_audio(self, interaction: discord.Interaction, queue_item: QueueItem):
+        """Handle the actual audio playback"""
+        try:
+            # Extract from cache to temp file only for playback
+            temp_playback_path = os.path.join(
+                self.cache.temp_dir, f"play_{queue_item.video_id}.m4a"
+            )
+
+            # Get audio data from cache
+            audio_data = self.cache.get_audio(queue_item.video_id)
+            if not audio_data:
+                raise ValueError("Audio data not found in cache")
+
+            log.info(f"Extracting audio to temporary playback file: {temp_playback_path}")
+            with open(temp_playback_path, "wb") as f:
+                f.write(audio_data)
+
+            # Connect to voice
+            voice_channel = interaction.user.voice.channel
+            voice_client = interaction.guild.voice_client
+
+            if voice_client is None:
+                voice_client = await voice_channel.connect()
+            elif voice_client.channel != voice_channel:
+                await voice_client.move_to(voice_channel)
+
+            # Update currently playing
+            self.currently_playing = queue_item
+
+            def after_playing(error):
+                try:
+                    if os.path.exists(temp_playback_path):
+                        os.unlink(temp_playback_path)
+                        log.info(f"Cleaned up temporary playback file: {temp_playback_path}")
+                except Exception as e:
+                    log.error(f"Cleanup error: {e}")
+                if error:
+                    log.error(f"Player error: {error}")
+
+                # Schedule playing the next song
+                asyncio.run_coroutine_threadsafe(self.play_next(interaction), self.bot.loop)
+
+            voice_client.play(
+                discord.FFmpegOpusAudio(temp_playback_path, **self.FFMPEG_OPTIONS),
+                after=after_playing,
+            )
+
+            yt = YouTube(url=queue_item.url)
+
+            await interaction.followup.send(
+                f"[**`Now playing:`** ***__`{yt.title}`__***]({yt.embed_url})\n"
+                f"`Author: {yt.author}` | `Length: {human_time_duration(yt.length)}`\n"
+                f"`Uploaded: {yt.publish_date}` | `Views: {yt.views}`"
+            )
+
+        except Exception as e:
+            log.error(f"Error in play_audio: {e}")
+            if os.path.exists(temp_playback_path):
+                os.unlink(temp_playback_path)
+            raise e
 
     async def wait_for_download(self, video_id: str, timeout: int = 30) -> bool:
         """Wait for download to complete"""
