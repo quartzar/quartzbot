@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import Any, Awaitable, Optional
 
 import redis
@@ -33,14 +34,45 @@ class AudioCache:
         """Get cached title if it exists"""
         return self.redis_str.get(f"title:{video_id}")
 
-    def cache_audio(self, video_id: str, audio_data: bytes, ttl: int = 3600):
-        """Cache audio data with TTL (default 1 hour)"""
-        self.redis.set(f"audio:{video_id}", value=audio_data)
-        log.info(f"Cached audio for video {video_id}")
+    def cache_audio(self, video_id: str, audio_data: bytes, max_retries: int = 3):
+        """Cache audio data with automatic LRU eviction"""
+        for attempt in range(max_retries):
+            try:
+                self.redis.set(f"audio:{video_id}", value=audio_data)
+                log.info(f"Cached audio for video {video_id}")
+                return
+            except redis.exceptions.ResponseError as e:
+                if "OOM command not allowed" in str(e):
+                    log.info(
+                        f"Cache full, attempt {attempt + 1}/{max_retries}, waiting for eviction..."
+                    )
+                    # Give Redis a moment to evict keys
+                    time.sleep(0.5)
+                    continue
+                raise  # Re-raise other Redis errors
 
-    def cache_title(self, video_id: str, title: str, ttl: int = 3600):
-        """Cache title with TTL (default 1 hour)"""
-        self.redis_str.set(f"title:{video_id}", value=title)
+        raise Exception(
+            f"Failed to cache audio after {max_retries} attempts - cache may be too full"
+        )
+
+    def cache_title(self, video_id: str, title: str, max_retries: int = 3):
+        """Cache title with automatic LRU eviction"""
+        for attempt in range(max_retries):
+            try:
+                self.redis_str.set(f"title:{video_id}", value=title)
+                return
+            except redis.exceptions.ResponseError as e:
+                if "OOM command not allowed" in str(e):
+                    log.info(
+                        f"Cache full, attempt {attempt + 1}/{max_retries}, waiting for eviction..."
+                    )
+                    time.sleep(0.5)
+                    continue
+                raise
+
+        raise Exception(
+            f"Failed to cache title after {max_retries} attempts - cache may be too full"
+        )
 
     def clear_cache(self):
         """Clear all cached data"""

@@ -1,5 +1,7 @@
 """Utility functions"""
 
+from dataclasses import dataclass
+
 TIME_DURATION_UNITS = (
     ("week", 60 * 60 * 24 * 7),
     ("day", 60 * 60 * 24),
@@ -7,6 +9,14 @@ TIME_DURATION_UNITS = (
     ("min", 60),
     ("sec", 1),
 )
+
+
+@dataclass
+class QueueItem:
+    video_id: str
+    title: str
+    requested_by: str
+    url: str
 
 
 def human_time_duration(seconds: int) -> str:

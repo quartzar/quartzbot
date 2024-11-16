@@ -4,17 +4,17 @@ import logging
 import os
 import re
 from collections import deque
-from dataclasses import dataclass
 from typing import Optional
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from pytubefix import YouTube
+from pytubefix import Search, YouTube
 from rich.logging import RichHandler
 
 from src.cache import AudioCache
-from src.utils import human_time_duration
+from src.utils import QueueItem, human_time_duration
+from src.views import SongSelector
 
 logging.basicConfig(
     level="INFO",
@@ -24,14 +24,6 @@ logging.basicConfig(
 )
 
 log = logging.getLogger("rich")
-
-
-@dataclass
-class QueueItem:
-    video_id: str
-    title: str
-    requested_by: str
-    url: str
 
 
 class QuartzBot(discord.Client):
@@ -196,19 +188,56 @@ class QuartzCog(commands.Cog):
             url,
         )
         if not video_id:
-            await interaction.response.send_message("Invalid YouTube URL", ephemeral=False)
-            log.info(f"Invalid YouTube URL: {url} ")
+            # Didn't get a URL, search instead and get first 5 results
+            search = Search(url)
+            results = search.videos[:5]
+
+            if not results:
+                await interaction.response.send_message("No results found!")
+                return
+
+            # Create embed with search results
+            embed = discord.Embed(
+                title="🔎 Search Results",
+                description=f"Found {len(results)} results for: {url}",
+                color=discord.Color.blue(),
+            )
+
+            for i, video in enumerate(results, 1):
+                embed.add_field(
+                    name=f"{i}. {video.title}",
+                    value=f"`Duration: {human_time_duration(video.length)}`",
+                    inline=False,
+                )
+
+            # Create view with selection menu
+            view = SongSelector(results, self, interaction)
+
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
+
+            # Store message reference for timeout handling
+            view.message = await interaction.original_response()
             return
 
-        video_id = video_id.group(1)
+        # If we got here, it's a direct URL
+        await self.play_from_url(interaction, url, give_me_file)
 
+    async def play_from_url(
+        self, interaction: discord.Interaction, url: str, give_me_file: bool = False
+    ):
+        """Helper method to play from direct URL"""
+        log.info("Running [underline]play_from_url()[/]")
+        video_id = re.search(
+            r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})',
+            url,
+        ).group(1)
+
+        await interaction.response.defer(ephemeral=False)
+
+        # Check cache first
+        audio_data = self.cache.get_audio(video_id)
+        title = self.cache.get_title(video_id)
         try:
-            await interaction.response.defer(ephemeral=False)
-
-            # Check cache first
-            audio_data = self.cache.get_audio(video_id)
-            title = self.cache.get_title(video_id)
-
             if not audio_data:
                 # Download if not cached
                 yt = YouTube(url, on_progress_callback=self.on_progress)
@@ -290,10 +319,10 @@ class QuartzCog(commands.Cog):
             )
             return
 
-        await self.terminate_playback(interaction.guild.voice_client)
         await interaction.response.send_message(
-            "Skipped current song",
+            "Skipping current song",
         )
+        await self.terminate_playback(interaction.guild.voice_client)
 
     @app_commands.command()
     async def queue(self, interaction: discord.Interaction):
@@ -318,6 +347,48 @@ class QuartzCog(commands.Cog):
         await interaction.response.send_message(
             "\n".join(queue_text),
         )
+
+    @app_commands.command()
+    async def pause(self, interaction: discord.Interaction):
+        """Pause the current song"""
+        if not interaction.guild.voice_client:
+            await interaction.response.send_message(
+                "Nothing is playing!",
+            )
+            return
+
+        voice_client = interaction.guild.voice_client
+
+        if voice_client.is_playing():
+            voice_client.pause()
+            await interaction.response.send_message(
+                f"⏸️ Paused: {self.currently_playing.title}",
+            )
+        else:
+            await interaction.response.send_message(
+                "Nothing is currently playing.",
+            )
+
+    @app_commands.command()
+    async def resume(self, interaction: discord.Interaction):
+        """Resume the current song"""
+        if not interaction.guild.voice_client:
+            await interaction.response.send_message(
+                "Nothing is paused!",
+            )
+            return
+
+        voice_client = interaction.guild.voice_client
+
+        if voice_client.is_paused():
+            voice_client.resume()
+            await interaction.response.send_message(
+                f"▶️ Resumed: {self.currently_playing.title}",
+            )
+        else:
+            await interaction.response.send_message(
+                "Nothing is currently paused.",
+            )
 
     """
     UTILITY
@@ -389,9 +460,10 @@ class QuartzCog(commands.Cog):
             )
 
             yt = YouTube(url=queue_item.url)
+            # await interaction.
 
             await interaction.followup.send(
-                f"[**`Now playing:`** ***__`{yt.title}`__***]({yt.embed_url})\n"
+                f"[**`Now playing:`** **__`{yt.title}`__**]({yt.embed_url})\n"
                 f"`Author: {yt.author}` | `Length: {human_time_duration(yt.length)}`\n"
                 f"`Uploaded: {yt.publish_date}` | `Views: {yt.views}`"
             )
