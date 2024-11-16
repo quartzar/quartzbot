@@ -94,8 +94,7 @@ class QuartzCog(commands.Cog):
         self.cache = AudioCache()
         self.download_progress = {}
         self.FFMPEG_OPTIONS = {
-            "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-            "options": "-vn",
+            "options": "-vn",  # Disable video
         }
 
     """"""
@@ -171,7 +170,7 @@ class QuartzCog(commands.Cog):
     """"""
 
     @app_commands.command()
-    async def play(self, interaction: discord.Interaction, url: str):
+    async def play(self, interaction: discord.Interaction, url: str, give_me_file: bool = False):
         """Play audio from YouTube URL"""
         log.info(f"Command [underline]/play[/] called with URL: [underline]{url}[/]")
 
@@ -206,7 +205,8 @@ class QuartzCog(commands.Cog):
                 title = yt.title
 
                 # Download directly to temp directory for initial download
-                stream = yt.streams.get_audio_only()
+                stream = yt.streams.filter(only_audio=True).order_by("abr").desc().first()
+                log.info(f"Highest quality audio stream found: {stream}")
                 temp_download_path = os.path.join(self.cache.temp_dir, f"download_{video_id}.m4a")
 
                 # Initialize progress tracking
@@ -271,13 +271,15 @@ class QuartzCog(commands.Cog):
                     if error:
                         log.error(f"Player error: {error}")
 
-                voice_client.play(discord.FFmpegPCMAudio(temp_playback_path), after=cleanup)
+                voice_client.play(discord.FFmpegOpusAudio(temp_playback_path, **self.FFMPEG_OPTIONS), after=cleanup)
 
                 await interaction.followup.send(
                     f"[**`Now playing:`** ***`{title}`***]({yt.embed_url})\n"
                     f"`Author: {yt.author}` | `Length: {human_time_duration(yt.length)}`\n"
                     f"`Uploaded: {yt.publish_date}` | `Views: {yt.views}`"
                 )
+                if give_me_file:
+                    await interaction.followup.send(file=discord.File(temp_playback_path, filename=f"{title}.m4a"))
 
             except Exception as e:
                 # Clean up temp playback file if voice connection fails
