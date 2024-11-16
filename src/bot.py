@@ -7,10 +7,12 @@ from typing import Optional
 
 import discord
 from discord import app_commands
+from discord.ext import commands
 from pytubefix import YouTube
 from rich.logging import RichHandler
 
-from .cache import AudioCache
+from src.cache import AudioCache
+from src.utils import human_time_duration
 
 logging.basicConfig(
     level="INFO",
@@ -39,7 +41,11 @@ class QuartzBot(discord.Client):
         log.info(f"Logged in as [bold bright_green]{self.user}[/] (ID: {self.user.id})")
 
         # Add cogs
-        await self.add_cog(QuartzCog(self))
+        cog = QuartzCog(self)
+
+        # Get all app commands from the cog
+        for command in cog.__cog_app_commands__:
+            self.tree.add_command(command)
 
         # Get current command count
         total_commands = len(list(self.tree.walk_commands()))
@@ -81,63 +87,22 @@ class QuartzBot(discord.Client):
         )
         log.info("[bold bright_green]quartzbot is ready![/]")
 
-    async def add_cog(self, cog):
-        """Helper method to add cogs since we're not using commands.Bot"""
-        for cmd in cog.commands:
-            self.tree.add_command(cmd)
 
-
-class QuartzCog:
-    FFMPEG_OPTIONS = {
-        "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-        "options": "-vn",
-    }
-
+class QuartzCog(commands.Cog):
     def __init__(self, bot: QuartzBot):
         self.bot = bot
         self.cache = AudioCache()
         self.download_progress = {}
-        self.commands = [
-            app_commands.Command(
-                name="ping",
-                description="Check the bot's latency",
-                callback=self.ping,
-            ),
-            app_commands.Command(
-                name="greet",
-                description="Get a friendly greeting",
-                callback=self.greet,
-            ),
-            app_commands.Command(
-                name="join",
-                description="Join your voice channel",
-                callback=self.join,
-            ),
-            app_commands.Command(
-                name="leave",
-                description="Leave the voice channel",
-                callback=self.leave,
-            ),
-            app_commands.Command(
-                name="play",
-                description="Play a YouTube video (provide URL)",
-                callback=self.play,
-            ),
-            app_commands.Command(
-                name="stop",
-                description="Stop playing audio",
-                callback=self.stop,
-            ),
-        ]
-        # Store voice clients
-        self.voice_clients = {}
+        self.FFMPEG_OPTIONS = {
+            "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+            "options": "-vn",
+        }
 
     """"""
 
-    async def ping(
-        self,
-        interaction: discord.Interaction,
-    ):
+    @app_commands.command()
+    async def ping(self, interaction: discord.Interaction):
+        """Check the bot's latency"""
         log.info("Command [underline]/ping[/] called")
         await interaction.response.send_message(
             f"Pong! Latency: {round(self.bot.latency * 1000)}ms"
@@ -145,20 +110,17 @@ class QuartzCog:
 
     """"""
 
+    @app_commands.command()
     async def greet(
-        self,
-        interaction: discord.Interaction,
-        name: str,
-        greeting_type: Optional[str] = "Hello",
+        self, interaction: discord.Interaction, name: str, greeting_type: Optional[str] = "Hello"
     ):
+        """Get a 'friendly' greeting"""
         await interaction.response.send_message(f"{greeting_type}, {name}! Terrible to meet you!")
 
     """"""
 
-    async def join(
-        self,
-        interaction: discord.Interaction,
-    ):
+    @app_commands.command()
+    async def join(self, interaction: discord.Interaction):
         """Join the user's voice channel"""
         if not interaction.user.voice:
             await interaction.response.send_message(
@@ -184,10 +146,8 @@ class QuartzCog:
 
     """"""
 
-    async def leave(
-        self,
-        interaction: discord.Interaction,
-    ):
+    @app_commands.command()
+    async def leave(self, interaction: discord.Interaction):
         """Leave the voice channel"""
         if not interaction.guild.voice_client:
             await interaction.response.send_message("I'm not in a voice channel!", ephemeral=False)
@@ -198,10 +158,8 @@ class QuartzCog:
 
     """"""
 
-    async def stop(
-        self,
-        interaction: discord.Interaction,
-    ):
+    @app_commands.command()
+    async def stop(self, interaction: discord.Interaction):
         """Stop playing audio"""
         if not interaction.guild.voice_client:
             await interaction.response.send_message("I'm not playing anything!", ephemeral=False)
@@ -212,11 +170,8 @@ class QuartzCog:
 
     """"""
 
-    async def play(
-        self,
-        interaction: discord.Interaction,
-        url: str,
-    ):
+    @app_commands.command()
+    async def play(self, interaction: discord.Interaction, url: str):
         """Play audio from YouTube URL"""
         log.info(f"Command [underline]/play[/] called with URL: [underline]{url}[/]")
 
@@ -244,6 +199,7 @@ class QuartzCog:
             audio_data = self.cache.get_audio(video_id)
             title = self.cache.get_title(video_id)
 
+            yt = None
             if not audio_data:
                 # Download if not cached
                 yt = YouTube(url, on_progress_callback=self.on_progress)
@@ -255,13 +211,13 @@ class QuartzCog:
 
                 # Initialize progress tracking
                 self.download_progress[video_id] = {
-                    'stream': stream,
-                    'completed': False,
-                    'percent': 0
+                    "stream": stream,
+                    "completed": False,
+                    "percent": 0,
                 }
 
                 # Start download
-                stream.download(output_path=self.cache.temp_dir, filename=f"download_{video_id}.m4a")
+                stream.download(output_path=self.cache.temp_dir, filename=f"download_{video_id}")
 
                 # Wait for download to complete
                 if not await self.wait_for_download(video_id):
@@ -274,7 +230,7 @@ class QuartzCog:
                 log.info(f"Download completed: {temp_download_path}")
 
                 # Read the file into Redis and delete the temp download file
-                with open(temp_download_path, 'rb') as f:
+                with open(temp_download_path, "rb") as f:
                     audio_data = f.read()
                 os.unlink(temp_download_path)
                 log.info("Temporary download file deleted")
@@ -282,10 +238,13 @@ class QuartzCog:
                 self.cache.cache_audio(video_id, audio_data)
                 self.cache.cache_title(video_id, title)
 
+            else:
+                yt = YouTube(url)
+
             # Extract from cache to temp file only for playback
             temp_playback_path = os.path.join(self.cache.temp_dir, f"play_{video_id}.m4a")
             log.info(f"Extracting audio to temporary playback file: {temp_playback_path}")
-            with open(temp_playback_path, 'wb') as f:
+            with open(temp_playback_path, "wb") as f:
                 f.write(audio_data)
 
             try:
@@ -310,15 +269,14 @@ class QuartzCog:
                     except Exception as e:
                         log.error(f"Cleanup error: {e}")
                     if error:
-                        log.error(f'Player error: {error}')
+                        log.error(f"Player error: {error}")
 
-                voice_client.play(
-                    discord.FFmpegPCMAudio(temp_playback_path),
-                    after=cleanup
-                )
+                voice_client.play(discord.FFmpegPCMAudio(temp_playback_path), after=cleanup)
 
                 await interaction.followup.send(
-                    f"Now playing: {title}",
+                    f"[**`Now playing:`** ***`{title}`***]({yt.embed_url})\n"
+                    f"`Author: {yt.author}` | `Length: {human_time_duration(yt.length)}`\n"
+                    f"`Uploaded: {yt.publish_date}` | `Views: {yt.views}`"
                 )
 
             except Exception as e:

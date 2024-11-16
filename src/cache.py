@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Optional, Any, Awaitable
+from typing import Any, Awaitable, Optional
 
 import redis
 
@@ -35,12 +35,12 @@ class AudioCache:
 
     def cache_audio(self, video_id: str, audio_data: bytes, ttl: int = 3600):
         """Cache audio data with TTL (default 1 hour)"""
-        self.redis.setex(f"audio:{video_id}", ttl, audio_data)
+        self.redis.set(f"audio:{video_id}", value=audio_data)
         log.info(f"Cached audio for video {video_id}")
 
     def cache_title(self, video_id: str, title: str, ttl: int = 3600):
         """Cache title with TTL (default 1 hour)"""
-        self.redis_str.setex(f"title:{video_id}", ttl, title)
+        self.redis_str.set(f"title:{video_id}", value=title)
 
     def clear_cache(self):
         """Clear all cached data"""

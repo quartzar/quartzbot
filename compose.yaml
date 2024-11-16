@@ -28,11 +28,11 @@ services:
     healthcheck:
       test: [ "CMD", "redict-cli", "ping" ]
       interval: 5s
-      timeout: 3s
-      retries: 3
+      timeout: 1s
+      retries: 5
     command: >
       redict-server 
-      --maxmemory 500mb 
+      --maxmemory 250mb 
       --maxmemory-policy allkeys-lru 
       --save 60 1
       --appendonly yes 
