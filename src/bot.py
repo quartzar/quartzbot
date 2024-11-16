@@ -134,7 +134,10 @@ class QuartzCog:
 
     """"""
 
-    async def ping(self, interaction: discord.Interaction):
+    async def ping(
+        self,
+        interaction: discord.Interaction,
+    ):
         log.info("Command [underline]/ping[/] called")
         await interaction.response.send_message(
             f"Pong! Latency: {round(self.bot.latency * 1000)}ms"
@@ -152,7 +155,10 @@ class QuartzCog:
 
     """"""
 
-    async def join(self, interaction: discord.Interaction):
+    async def join(
+        self,
+        interaction: discord.Interaction,
+    ):
         """Join the user's voice channel"""
         if not interaction.user.voice:
             await interaction.response.send_message(
@@ -178,7 +184,10 @@ class QuartzCog:
 
     """"""
 
-    async def leave(self, interaction: discord.Interaction):
+    async def leave(
+        self,
+        interaction: discord.Interaction,
+    ):
         """Leave the voice channel"""
         if not interaction.guild.voice_client:
             await interaction.response.send_message("I'm not in a voice channel!", ephemeral=False)
@@ -189,7 +198,10 @@ class QuartzCog:
 
     """"""
 
-    async def stop(self, interaction: discord.Interaction):
+    async def stop(
+        self,
+        interaction: discord.Interaction,
+    ):
         """Stop playing audio"""
         if not interaction.guild.voice_client:
             await interaction.response.send_message("I'm not playing anything!", ephemeral=False)
@@ -200,7 +212,11 @@ class QuartzCog:
 
     """"""
 
-    async def play(self, interaction: discord.Interaction, url: str):
+    async def play(
+        self,
+        interaction: discord.Interaction,
+        url: str,
+    ):
         """Play audio from YouTube URL"""
         log.info(f"Command [underline]/play[/] called with URL: [underline]{url}[/]")
 
@@ -229,84 +245,93 @@ class QuartzCog:
             title = self.cache.get_title(video_id)
 
             if not audio_data:
-                log.info("Video audio not cached, downloading it")
                 # Download if not cached
                 yt = YouTube(url, on_progress_callback=self.on_progress)
                 title = yt.title
 
-                # Download directly to temp directory
+                # Download directly to temp directory for initial download
                 stream = yt.streams.get_audio_only()
-                temp_path = os.path.join(self.cache.temp_dir, f"{video_id}.m4a")
+                temp_download_path = os.path.join(self.cache.temp_dir, f"download_{video_id}.m4a")
 
                 # Initialize progress tracking
                 self.download_progress[video_id] = {
-                    "stream": stream,
-                    "completed": False,
-                    "percent": 0,
+                    'stream': stream,
+                    'completed': False,
+                    'percent': 0
                 }
 
                 # Start download
-                stream.download(output_path=self.cache.temp_dir, filename=f"{video_id}")
+                stream.download(output_path=self.cache.temp_dir, filename=f"download_{video_id}.m4a")
 
                 # Wait for download to complete
                 if not await self.wait_for_download(video_id):
                     raise TimeoutError("Download timed out")
 
                 # Verify file exists
-                if not os.path.exists(temp_path):
-                    raise FileNotFoundError(f"Downloaded file not found: {temp_path}")
+                if not os.path.exists(temp_download_path):
+                    raise FileNotFoundError(f"Downloaded file not found: {temp_download_path}")
 
-                log.info(f"Download completed: {temp_path}")
+                log.info(f"Download completed: {temp_download_path}")
 
-                # Read the file into Redis
-                with open(temp_path, "rb") as f:
+                # Read the file into Redis and delete the temp download file
+                with open(temp_download_path, 'rb') as f:
                     audio_data = f.read()
+                os.unlink(temp_download_path)
+                log.info("Temporary download file deleted")
 
                 self.cache.cache_audio(video_id, audio_data)
                 self.cache.cache_title(video_id, title)
-            else:
-                log.info("Video audio cached, getting it")
-                # Write cached data to temp file
-                temp_path = os.path.join(self.cache.temp_dir, f"{video_id}.m4a")
-                with open(temp_path, "wb") as f:
-                    f.write(audio_data)
 
-            # Connect to voice
-            voice_channel = interaction.user.voice.channel
-            voice_client = interaction.guild.voice_client
+            # Extract from cache to temp file only for playback
+            temp_playback_path = os.path.join(self.cache.temp_dir, f"play_{video_id}.m4a")
+            log.info(f"Extracting audio to temporary playback file: {temp_playback_path}")
+            with open(temp_playback_path, 'wb') as f:
+                f.write(audio_data)
 
-            if voice_client is None:
-                voice_client = await voice_channel.connect()
-            elif voice_client.channel != voice_channel:
-                await voice_client.move_to(voice_channel)
+            try:
+                # Connect to voice
+                voice_channel = interaction.user.voice.channel
+                voice_client = interaction.guild.voice_client
 
-            # Play audio
-            if voice_client.is_playing():
-                voice_client.stop()
+                if voice_client is None:
+                    voice_client = await voice_channel.connect()
+                elif voice_client.channel != voice_channel:
+                    await voice_client.move_to(voice_channel)
 
-            def cleanup(error):
-                try:
-                    if os.path.exists(temp_path):
-                        os.unlink(temp_path)
-                except Exception as e:
-                    print(f"Cleanup error: {e}")
-                if error:
-                    print(f"Player error: {error}")
+                # Play audio
+                if voice_client.is_playing():
+                    voice_client.stop()
 
-            voice_client.play(discord.FFmpegPCMAudio(temp_path), after=cleanup)
+                def cleanup(error):
+                    try:
+                        if os.path.exists(temp_playback_path):
+                            os.unlink(temp_playback_path)
+                            log.info(f"Cleaned up temporary playback file: {temp_playback_path}")
+                    except Exception as e:
+                        log.error(f"Cleanup error: {e}")
+                    if error:
+                        log.error(f'Player error: {error}')
 
-            await interaction.followup.send(f"Now playing: {title}", ephemeral=False)
+                voice_client.play(
+                    discord.FFmpegPCMAudio(temp_playback_path),
+                    after=cleanup
+                )
+
+                await interaction.followup.send(
+                    f"Now playing: {title}",
+                )
+
+            except Exception as e:
+                # Clean up temp playback file if voice connection fails
+                if os.path.exists(temp_playback_path):
+                    os.unlink(temp_playback_path)
+                raise e
 
         except Exception as e:
             await interaction.followup.send(
                 f"An error occurred: {str(e)}",
             )
-            # Ensure cleanup on error
-            if "temp_path" in locals():
-                try:
-                    os.unlink(temp_path)
-                except:
-                    pass
+            log.error(f"An error occurred during [underline]/play[/] command: {e}")
 
     async def wait_for_download(self, video_id: str, timeout: int = 30) -> bool:
         """Wait for download to complete"""

@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Optional
+from typing import Optional, Any, Awaitable
 
 import redis
 
@@ -20,13 +20,14 @@ class AudioCache:
         self.temp_dir = "/tmp/audio"
         os.makedirs(self.temp_dir, exist_ok=True)
 
-    def get_audio(self, video_id: str) -> Optional[bytes]:
-        """Get cached audio data if it exists"""
+    def get_audio(self, video_id: str) -> Awaitable[Any] | None:
+        """Get cached audio data & title if it exists"""
         audio_data = self.redis.get(f"audio:{video_id}")
         if audio_data:
-            log.info(f"Cache hit for video {video_id}")
-            return audio_data
-        return None
+            log.info(f"[bright_green]Cache hit for video {video_id}[/]")
+        else:
+            log.info(f"[yellow]Cache miss for video {video_id}[/]")
+        return audio_data
 
     def get_title(self, video_id: str) -> Optional[str]:
         """Get cached title if it exists"""
