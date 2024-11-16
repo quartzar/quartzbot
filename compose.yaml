@@ -1,5 +1,5 @@
 services:
-  quartzbot:
+  bot:
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,6 +8,36 @@ services:
     tty: true
     volumes:
       - ./src:/app/src
+      - temp_audio:/tmp/audio
     env_file:
       - .env
+    depends_on:
+      cache:
+        condition: service_healthy
     command: python -m src.bot --guild
+
+  cache:
+    image: registry.redict.io/redict:7-alpine
+    container_name: redict
+    hostname: quartzbot-redict
+    restart: unless-stopped
+    volumes:
+      - redict_data:/data
+    expose:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redict-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    command: >
+      redict-server 
+      --maxmemory 500mb 
+      --maxmemory-policy allkeys-lru 
+      --save 60 1
+      --appendonly yes 
+      --appendfsync everysec  
+
+volumes:
+  redict_data:  # persistent redict data
+  temp_audio:  # temp volume for FFmpeg processing

@@ -2,6 +2,9 @@
 uv
 rich
 argparse
+requests
+redis
+pytubefix
 
 # Bot-specific
 discord.py[voice]

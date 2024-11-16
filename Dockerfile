@@ -6,6 +6,11 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
+    python3-dev \
+    libffi-dev \
+    # Required for voice support
+    ffmpeg \
+    libopus-dev \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir uv
 
