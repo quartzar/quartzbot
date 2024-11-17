@@ -4,7 +4,7 @@
 
 ### Repository structure
 
-```
+```json lines
 quartzbot/
 ├── compose.yaml
 ├── Dockerfile
@@ -33,7 +33,6 @@ quartzbot/
     │       └── cog.py
     ├── main.py
     └── utils.py
-
 ```
 
 ## Setup
@@ -42,7 +41,7 @@ quartzbot/
 Create a `.env` file at the repository root. This is essential as otherwise the bot will be have no way of connecting to Discord. 
 
 Example `.env` file (also see [.env.example](.env.example)):
-```
+```dotenv
 DISCORD_TOKEN=foo
 GUILD_ID=bar
 ```

@@ -1,3 +1,6 @@
 # Formatters
 isort
 black
+
+# Linters
+pylint
