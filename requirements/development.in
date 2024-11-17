@@ -1,6 +1,9 @@
 # Formatters
-isort
 black
+ruff
 
 # Linters
 pylint
+
+# Utility
+invoke

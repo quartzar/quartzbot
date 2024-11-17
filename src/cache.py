@@ -1,7 +1,8 @@
 import logging
 import os
 import time
-from typing import Any, Awaitable, Optional
+from collections.abc import Awaitable
+from typing import Any
 
 import redis
 
@@ -11,11 +12,15 @@ log = logging.getLogger("rich")
 class AudioCache:
     def __init__(self):
         self.redis = redis.Redis(
-            host="quartzbot-redict", port=6379, decode_responses=False  # For binary data
+            host="quartzbot-redict",
+            port=6379,
+            decode_responses=False,  # For binary data
         )
         # Separate client for string data
         self.redis_str = redis.Redis(
-            host="quartzbot-redict", port=6379, decode_responses=True  # For string data
+            host="quartzbot-redict",
+            port=6379,
+            decode_responses=True,  # For string data
         )
         # Create temp directory in the mounted volume
         self.temp_dir = "/tmp/audio"
@@ -30,7 +35,7 @@ class AudioCache:
             log.info(f"[yellow]Cache miss for video {video_id}[/]")
         return audio_data
 
-    def get_title(self, video_id: str) -> Optional[str]:
+    def get_title(self, video_id: str) -> str | None:
         """Get cached title if it exists"""
         return self.redis_str.get(f"title:{video_id}")
 
