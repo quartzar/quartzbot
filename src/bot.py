@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import discord
 from discord import app_commands
@@ -12,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 class QuartzBot(discord.Client):
-    def __init__(self, guild_id: Optional[str] = None):
+    def __init__(self, guild_id: str = None):
         self.guild_id = guild_id
         intents = discord.Intents.default()
         intents.message_content = True
@@ -50,8 +49,10 @@ class QuartzBot(discord.Client):
                 self.tree.copy_global_to(guild=guild)
                 synced = await self.tree.sync(guild=guild)
                 log.info(
-                    f"[green]Synced {len(synced)} commands to guild: {self.guild_id} "
-                    f"({total_commands} total commands)[/]"
+                    "[green]Synced %d commands to guild: %s (%d total commands)[/]",
+                    len(synced),
+                    self.guild_id,
+                    total_commands,
                 )
             else:
                 # Global sync with command clear
@@ -63,7 +64,11 @@ class QuartzBot(discord.Client):
                 )
 
         except discord.errors.Forbidden as e:
-            log.error(f"[red]Failed to sync commands: {e}[/]")
+            log.error(f"[red]Failed to sync commands: Missing permissions - {e}[/]")
+        except discord.errors.HTTPException as e:
+            log.error(f"[red]Failed to sync commands: Discord API error - {e}[/]")
+        except discord.errors.DiscordException as e:
+            log.error(f"[red]Failed to sync commands: Discord-specific error - {e}[/]")
         except Exception as e:
             log.error(f"[red]Unexpected error syncing commands: {e}[/]")
 

@@ -21,4 +21,11 @@ jobs:
         uv pip install --system -r requirements/development.txt
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        pylint --rcfile .pylintrc --output-format=text $(git ls-files '*.py') | tee pylint.txt
+        echo "PYLINT_SCORE=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)" >> $GITHUB_ENV
+    - name: Upload pylint results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pylint-results
+        path: pylint.txt

@@ -1,3 +1,6 @@
+![Pylint](https://github.com/quartzar/quartzbot/actions/workflows/pylint.yml/badge.svg?branch=main)
+![Pylint](https://github.com/quartzar/quartzbot/actions/workflows/pylint.yml/badge.svg?event=push)
+
 # quartzbot
 
 *WIP Discord Bot written in Python*
