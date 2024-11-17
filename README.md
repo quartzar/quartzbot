@@ -10,14 +10,29 @@ quartzbot/
 ├── Dockerfile
 ├── LICENSE
 ├── README.md
-├── requirements/
+├── requirements
 │   ├── base.in
 │   ├── base.txt
 │   ├── development.in
 │   └── development.txt
-└── src/
+└── src
     ├── __init__.py
-    └── bot.py
+    ├── bot.py
+    ├── cache.py
+    ├── cogs
+    │   ├── __init__.py
+    │   ├── music
+    │   │   ├── __init__.py
+    │   │   ├── cog.py
+    │   │   └── views.py
+    │   ├── text
+    │   │   ├── __init__.py
+    │   │   └── cog.py
+    │   └── voice
+    │       ├── __init__.py
+    │       └── cog.py
+    ├── main.py
+    └── utils.py
 
 ```
 
@@ -66,16 +81,9 @@ uv pip compile --generate-hashes requirements/development.in -o requirements/dev
 
 #### Running the bot
 
-Once you have set up your dev environment, there are 2 options for starting the bot.
+Once you have set up your dev environment, start the bot like so:
 
-**Using Docker Compose (recommended):**
 ```bash
 docker compose up --build
 # use `-d` to detach 
 ```
-
-**Directly using local venv:**
-```bash
-python src/bot.py
-```
-
