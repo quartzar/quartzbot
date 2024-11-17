@@ -11,6 +11,9 @@ services:
       - temp_audio:/tmp/audio
     env_file:
       - .env
+    environment:
+      - PYTHONUNBUFFERED=1  # Enable real-time logging
+      - PYTHONDONTWRITEBYTECODE=1  # Prevent .pyc files
     depends_on:
       cache:
         condition: service_healthy

@@ -16,8 +16,9 @@ class TextCog(commands.Cog):
     async def ping(self, interaction: Interaction):
         """Check the bot's latency"""
         log.info("Command [underline]/ping[/] called")
+
         await interaction.response.send_message(
-            f"Pong! Latency: {round(self.bot.latency * 1000)}ms"
+            f"# P O N G\n**`Latency: {round(self.bot.latency * 1000)}ms`**"
         )
 
     """"""

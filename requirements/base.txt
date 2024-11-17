@@ -673,7 +673,9 @@ watchfiles==0.15.0 \
     --hash=sha256:d1f9de6b776b3aff17898a4cf5ac5a2d0a16212ea7aad2bbe0ef6aa3e79a96af \
     --hash=sha256:d4f45acd1143db6d3ee77a4ff12d3239bc8083108133e6174e9dcce59c1f9902 \
     --hash=sha256:f7f71012e096e11256fae3b37617a9777980f281e18deb2e789e85cd5b113935
-    # via discord-ext-autoreload
+    # via
+    #   -r requirements/base.in
+    #   discord-ext-autoreload
 yarl==1.17.1 \
     --hash=sha256:06157fb3c58f2736a5e47c8fcbe1afc8b5de6fb28b14d25574af9e62150fcaac \
     --hash=sha256:067a63fcfda82da6b198fa73079b1ca40b7c9b7994995b6ee38acda728b64d47 \

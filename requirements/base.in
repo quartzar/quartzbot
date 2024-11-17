@@ -5,6 +5,7 @@ argparse
 requests
 redis
 pytubefix
+watchfiles
 
 # Bot-specific
 discord.py[voice]

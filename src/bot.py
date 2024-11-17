@@ -1,11 +1,10 @@
+import asyncio
 import logging
 
 from discord import Activity, ActivityType, Client, Intents, Object, app_commands
 from discord import errors as dc_errors
 
-from src.cogs.music.cog import MusicCog
-from src.cogs.text.cog import TextCog
-from src.cogs.voice.cog import VoiceCog
+from src.reloader import CogReloader
 
 log = logging.getLogger(__name__)
 
@@ -13,6 +12,8 @@ log = logging.getLogger(__name__)
 class QuartzBot(Client):
     def __init__(self, guild_id: str = None):
         self.guild_id = guild_id
+        self.guild = Object(id=guild_id)
+        self.cogs = {}
         intents = Intents.default()
         intents.message_content = True
         intents.voice_states = True
@@ -22,25 +23,24 @@ class QuartzBot(Client):
         # Create the command tree for slash commands
         self.tree = app_commands.CommandTree(self)
 
+        # Initialise reloader
+        self.reloader = CogReloader(self)
+
     async def setup_hook(self):
         """Called when the bot is starting up"""
         log.info(f"Logged in as [bold bright_green]{self.user}[/] (ID: {self.user.id})")
 
-        # Get all cogs and add their commands
-        cogs = [
-            MusicCog(self),
-            TextCog(self),
-            VoiceCog(self),
-        ]
-        for cog in cogs:
-            for command in cog.__cog_app_commands__:
-                self.tree.add_command(command)
+        # Load all cogs using reloader
+        await self.reloader.load_cogs()
 
-        # Get current command count
+        # Start watching for changes
+        asyncio.create_task(self.reloader.start_watching())
+
+    async def sync_commands(self):
+        """Sync commands with Discord"""
         total_commands = len(list(self.tree.walk_commands()))
-
-        # Sync commands to the guild specified by GUILD_ID
         log.info("Syncing commands...")
+
         try:
             if self.guild_id:
                 # Guild-specific sync with command clear
@@ -59,8 +59,9 @@ class QuartzBot(Client):
                 self.tree.clear_commands(guild=None)
                 synced = await self.tree.sync()
                 log.info(
-                    f"[green]Synced {len(synced)} commands globally "
-                    f"({total_commands} total commands)[/]"
+                    "[green]Synced %s commands globally (%s total commands)[/]",
+                    len(synced),
+                    total_commands,
                 )
 
         except dc_errors.Forbidden as e:
