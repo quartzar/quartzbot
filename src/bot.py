@@ -1,7 +1,7 @@
 import logging
 
-import discord
-from discord import app_commands
+from discord import Activity, ActivityType, Client, Intents, Object, app_commands
+from discord import errors as dc_errors
 
 from src.cogs.music.cog import MusicCog
 from src.cogs.text.cog import TextCog
@@ -10,10 +10,10 @@ from src.cogs.voice.cog import VoiceCog
 log = logging.getLogger(__name__)
 
 
-class QuartzBot(discord.Client):
+class QuartzBot(Client):
     def __init__(self, guild_id: str = None):
         self.guild_id = guild_id
-        intents = discord.Intents.default()
+        intents = Intents.default()
         intents.message_content = True
         intents.voice_states = True
 
@@ -44,7 +44,7 @@ class QuartzBot(discord.Client):
         try:
             if self.guild_id:
                 # Guild-specific sync with command clear
-                guild = discord.Object(id=self.guild_id)
+                guild = Object(id=self.guild_id)
                 self.tree.clear_commands(guild=guild)
                 self.tree.copy_global_to(guild=guild)
                 synced = await self.tree.sync(guild=guild)
@@ -63,11 +63,11 @@ class QuartzBot(discord.Client):
                     f"({total_commands} total commands)[/]"
                 )
 
-        except discord.errors.Forbidden as e:
+        except dc_errors.Forbidden as e:
             log.error(f"[red]Failed to sync commands: Missing permissions - {e}[/]")
-        except discord.errors.HTTPException as e:
+        except dc_errors.HTTPException as e:
             log.error(f"[red]Failed to sync commands: Discord API error - {e}[/]")
-        except discord.errors.DiscordException as e:
+        except dc_errors.DiscordException as e:
             log.error(f"[red]Failed to sync commands: Discord-specific error - {e}[/]")
         except Exception as e:
             log.error(f"[red]Unexpected error syncing commands: {e}[/]")
@@ -75,6 +75,6 @@ class QuartzBot(discord.Client):
     async def on_ready(self):
         """Called when the bot is ready and connected"""
         await self.change_presence(
-            activity=discord.Activity(type=discord.ActivityType.watching, name="the crystals grow")
+            activity=Activity(type=ActivityType.watching, name="the crystals grow")
         )
         log.info("[bold bright_green]quartzbot is ready![/]")

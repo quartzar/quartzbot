@@ -8,3 +8,4 @@ pytubefix
 
 # Bot-specific
 discord.py[voice]
+discord-ext-autoreload
