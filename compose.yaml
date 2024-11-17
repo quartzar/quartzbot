@@ -14,7 +14,7 @@ services:
     depends_on:
       cache:
         condition: service_healthy
-    command: python -m src.bot --guild
+    command: python -m src.main --guild
 
   cache:
     image: registry.redict.io/redict:7-alpine

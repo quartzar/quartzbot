@@ -2,7 +2,9 @@ import logging
 
 import discord
 
-log = logging.getLogger("rich")
+from src.utils import human_time_duration
+
+log = logging.getLogger(__name__)
 
 
 class SongSelector(discord.ui.View):
@@ -24,7 +26,7 @@ class SongSelect(discord.ui.Select):
         options = [
             discord.SelectOption(
                 label=f"{result.title[:70]}...",  # Truncate long titles
-                description=f"Duration: {result.length} seconds",
+                description=f"Duration: {human_time_duration(result.length)}",
                 value=str(i),
                 emoji="🎵",
             )
