@@ -1,5 +1,4 @@
-![Pylint](https://github.com/quartzar/quartzbot/actions/workflows/pylint.yml/badge.svg?branch=main)
-![Pylint](https://github.com/quartzar/quartzbot/actions/workflows/pylint.yml/badge.svg?event=push)
+![pylint](https://github.com/quartzar/quartzbot/actions/workflows/pylint.yml/badge.svg?event=push)
 
 # quartzbot
 
@@ -7,7 +6,7 @@
 
 ### Repository structure
 
-```json lines
+```bash
 quartzbot/
 ├── compose.yaml
 ├── Dockerfile
