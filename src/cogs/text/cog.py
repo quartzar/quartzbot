@@ -27,6 +27,7 @@ class TextCog(commands.Cog):
     async def greet(self, interaction: Interaction, name: str, greeting_type: str = "Hello"):
         """Get a 'friendly' greeting
 
+        :param interaction:
         :param name: Who to greet?
         :param greeting_type: What to open with? Defaults to "Hello"
         """

@@ -3,16 +3,19 @@ import logging
 import os
 from argparse import ArgumentParser, Namespace
 
+from rich.console import Console
 from rich.logging import RichHandler
 
 from src.bot import QuartzBot
 
-logging.basicConfig(
-    level="INFO",
-    format="%(message)s",
-    datefmt="[%X]",
-    handlers=[RichHandler(markup=True, rich_tracebacks=True)],
+rich_handler = RichHandler(
+    console=Console(width=100),
+    markup=True,
+    rich_tracebacks=True,
+    enable_link_path=False,
 )
+
+logging.basicConfig(level="INFO", format="%(message)s", datefmt="[%X]", handlers=[rich_handler])
 
 log = logging.getLogger("rich")
 
