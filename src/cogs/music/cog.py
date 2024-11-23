@@ -358,10 +358,10 @@ class MusicCog(commands.Cog):
             embed = Embed(
                 title=f"Now Playing: __{yt.title}__",
                 description=f"**Author:** {yt.author}\n"
-                            f"**Length:** {human_time_duration(yt.length)}\n"
-                            f"**Uploaded:** {str(yt.publish_date).split(" ")[0]}\n"
-                            f"**Views:** {yt.views}\n"
-                            f"[]({yt.embed_url}",
+                f"**Length:** {human_time_duration(yt.length)}\n"
+                f"**Uploaded:** {str(yt.publish_date).split(" ")[0]}\n"
+                f"**Views:** {yt.views}\n"
+                f"[]({yt.embed_url}",
                 color=Color.green(),
                 url=yt.embed_url,
             )

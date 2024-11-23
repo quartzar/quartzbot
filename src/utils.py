@@ -1,4 +1,5 @@
 """Utility functions"""
+
 import logging
 from dataclasses import dataclass
 

@@ -26,8 +26,7 @@ class CogReloader:
 
             # Get all cog directories
             cog_dirs = [
-                d for d in self.cog_path.iterdir()
-                if d.is_dir() and not d.name.startswith("__")
+                d for d in self.cog_path.iterdir() if d.is_dir() and not d.name.startswith("__")
             ]
 
             # Load each cog
@@ -65,9 +64,7 @@ class CogReloader:
 
             # Create new cog instance and store commands
             cog = cog_class(self.bot)
-            self.registered_commands[cog_name] = {
-                cmd.name for cmd in cog.__cog_app_commands__
-            }
+            self.registered_commands[cog_name] = {cmd.name for cmd in cog.__cog_app_commands__}
 
             # Add new commands
             for cmd in cog.__cog_app_commands__:

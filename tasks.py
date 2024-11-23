@@ -9,9 +9,9 @@ console = Console()
 @task
 def reformat(c):
     # Run ruff check first to sort imports (like isort)
-    c.run("ruff check --fix", pty=True)
+    c.run("ruff check --fix", pty=True, warn=True)
     # Then run the formatter
-    c.run("ruff format", pty=True)
+    c.run("ruff format .", pty=True, warn=True)
 
 
 @task
@@ -35,7 +35,7 @@ def update_requirements(c, upgrade: bool = False):
             "ERROR: Input and output requirements files count differs (input: %s, output: %s",
             len(input_files),
             len(output_files),
-            style="bold bright_red"
+            style="bold bright_red",
         )
         return
 
@@ -47,4 +47,6 @@ def update_requirements(c, upgrade: bool = False):
         ]
         c.run(" ".join(cmd), pty=True)
 
-    console.log("All requirements files successfully updated & compiled!", style="bold bright_green")
+    console.log(
+        "All requirements files successfully updated & compiled!", style="bold bright_green"
+    )
