@@ -60,7 +60,7 @@ class MusicCog(commands.Cog):
         if not video_id:
             # Didn't get a URL, search instead and get first 5 results
             search = Search(url)
-            results = search.videos[:5]
+            results = search.videos[:7]
 
             if not results:
                 await interaction.response.send_message("No results found!")
@@ -355,11 +355,24 @@ class MusicCog(commands.Cog):
 
             yt = YouTube(url=queue_item.url)
 
-            await interaction.followup.send(
-                f"[**`Now playing:`** **__`{yt.title}`__**]({yt.embed_url})\n"
-                f"`Author: {yt.author}` | `Length: {human_time_duration(yt.length)}`\n"
-                f"`Uploaded: {yt.publish_date}` | `Views: {yt.views}`"
+            embed = Embed(
+                title=f"Now Playing: __{yt.title}__",
+                description=f"**Author:** {yt.author}\n"
+                            f"**Length:** {human_time_duration(yt.length)}\n"
+                            f"**Uploaded:** {str(yt.publish_date).split(" ")[0]}\n"
+                            f"**Views:** {yt.views}\n"
+                            f"[]({yt.embed_url}",
+                color=Color.green(),
+                url=yt.embed_url,
             )
+
+            await interaction.followup.send(embed=embed)
+
+            # await interaction.followup.send(
+            #     f"[**`Now playing:`** **__`{yt.title}`__**]({yt.embed_url})\n"
+            #     f"`Author: {yt.author}` | `Length: {human_time_duration(yt.length)}`\n"
+            #     f"`Uploaded: {yt.publish_date}` | `Views: {yt.views}`"
+            # )
 
         except Exception as e:
             log.error(f"Error in play_audio: {e}")
