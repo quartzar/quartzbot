@@ -1,20 +1,17 @@
 import asyncio
 import logging
-from datetime import datetime
 
 from discord import (
     Client,
     Intents,
     Interaction,
-    Member,
-    User,
-    abc,
     app_commands,
     errors as dc_errors,
 )
 from discord.app_commands import Command, ContextMenu
 
 from src.activities import Activities
+from src.database import Database
 from src.reloader import CogReloader
 
 log = logging.getLogger(__name__)
@@ -34,12 +31,18 @@ class QuartzBot(Client):
         # Initialise reloader
         self.reloader = CogReloader(self)
 
+        # Initialise database
+        self.db = Database(self)
+
     async def setup_hook(self):
         """Called when the bot is starting up"""
         log.info(f"Logged in as [bold bright_green]{self.user}[/] (ID: {self.user.id})")
 
         # Load all cogs using reloader
         await self.reloader.load_cogs()
+
+        # Set up database and generate schemas
+        await self.db.init()
 
         # Start watching for changes
         asyncio.create_task(self.reloader.start_watching())
@@ -89,14 +92,15 @@ class QuartzBot(Client):
     async def on_app_command_completion(interaction: Interaction, command: Command | ContextMenu):
         """Called when an app command is completed"""
         log.info(
-            "Command [underline]%s[/] completed with interaction [underline]%s[/]",
-            command.name,
-            interaction,
+            f"Command [underline]/{command.name}[/] completed.\n"
+            f"➞ User:    [bold]{interaction.user.name}[/] ({interaction.user.id})\n"
+            f"➞ Guild:   [bold]{interaction.guild.name}[/] ({interaction.guild.id})\n"
+            f"➞ Channel: [bold]{interaction.channel.name}[/] ({interaction.channel.id})"
         )
 
-    @staticmethod
-    async def on_typing(channel: abc.Messageable, user: User | Member, when: datetime):
-        """Called when a user starts typing in a channel"""
-        log.info("%s is typing in %s", user, channel)
-        # Send a message to the channel the user is typing in
-        await channel.send(f"{user.mention} is typing...")
+    # @staticmethod
+    # async def on_typing(channel: abc.Messageable, user: User | Member, when: datetime):
+    #     """Called when a user starts typing in a channel"""
+    #     log.info("%s is typing in %s", user, channel)
+    #     # Send a message to the channel the user is typing in
+    #     await channel.send(f"{user.mention} is typing...")

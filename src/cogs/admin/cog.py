@@ -26,6 +26,55 @@ class AdminCog(Cog):
         self._watcher_task = None
 
     @app_commands.command()
+    async def get_database_models(self, interaction: Interaction):
+        """Get description of all database models"""
+        try:
+            models = await self.bot.db.describe_all_models()
+            await interaction.response.send_message(f"```{models}```", ephemeral=True)
+        except Exception as e:
+            log.error(f"[red]Error checking database models: {str(e)}[/]")
+            await interaction.response.send_message(
+                f"❌ Error checking database model: {str(e)}", ephemeral=True
+            )
+
+    # @app_commands.checks.has_permissions(administrator=True)
+    # @app_commands.command()
+    # @is_owner()
+    # async def set_persistent_channel(self, interaction: Interaction):
+    #     """Set current channel as the persistent message channel"""
+    #     try:
+    #         # Initialise store if not already done
+    #         if not hasattr(self.bot, "store"):
+    #             self.bot.store = PersistentStore()
+    #
+    #         # First save config without message ID
+    #         await self.bot.store.set_persistent_message(
+    #             str(interaction.guild_id), str(interaction.channel_id)
+    #         )
+    #
+    #         # Send initial message
+    #         message = await interaction.channel.send(
+    #             "This is a persistent message that will be updated!"
+    #         )
+    #
+    #         # Update config with message ID
+    #         await self.bot.store.set_persistent_message(
+    #             str(interaction.guild_id), str(interaction.channel_id), str(message.id)
+    #         )
+    #
+    #         await interaction.response.send_message(
+    #             "✅ Persistent message channel set!",
+    #             # ephemeral=True
+    #         )
+    #
+    #     except Exception as e:
+    #         log.exception("Failed to set persistent channel: %s", str(e))
+    #         await interaction.response.send_message(
+    #             "❌ Failed to set persistent channel",
+    #             # ephemeral=True
+    #         )
+
+    @app_commands.command()
     @is_owner()
     async def reload_cogs(self, interaction: Interaction):
         """ADMIN ONLY: Manually reload all cogs"""

@@ -3,10 +3,14 @@ uv
 rich
 argparse
 requests
-redis
 pytubefix
 watchfiles
 
 # Bot-specific
 discord.py[voice]
 discord-ext-autoreload
+
+# Cache & database
+redis
+tortoise-orm
+tortoise-cli

@@ -10,7 +10,7 @@ services:
     tty: true
     volumes:
       - ./src:/app/src
-      - temp_audio:/tmp/audio
+      - db-data:/app/data
     env_file:
       - .env
     depends_on:
@@ -25,8 +25,6 @@ services:
     container_name: redict
     hostname: quartzbot-redict
     restart: unless-stopped
-    volumes:
-      - redict_data:/data
     expose:
       - "6379"
     healthcheck:
@@ -38,12 +36,8 @@ services:
       retries: 5
     command: >
       redict-server 
-      --maxmemory 250mb 
-      --maxmemory-policy allkeys-lru 
-      --save 60 1
-      --appendonly yes 
-      --appendfsync everysec  
+      --maxmemory 200mb 
+      --maxmemory-policy allkeys-lru
 
 volumes:
-  redict_data:  # persistent redict data
-  temp_audio:  # temp volume for FFmpeg processing
+  db-data:

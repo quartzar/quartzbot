@@ -22,13 +22,13 @@ class AudioCache:
             port=6379,
             decode_responses=True,  # For string data
         )
-        # Create temp directory in the mounted volume
+
         self.temp_dir = "/tmp/audio"
         os.makedirs(self.temp_dir, exist_ok=True)
 
     def get_audio(self, video_id: str) -> Awaitable[Any] | None:
         """Get cached audio data & title if it exists"""
-        audio_data = self.redis.get(f"audio:{video_id}")
+        audio_data = self.redis.get(f"video:{video_id}:audio")
         if audio_data:
             log.info(f"[bright_green]Cache hit for video {video_id}[/]")
         else:
@@ -37,13 +37,13 @@ class AudioCache:
 
     def get_title(self, video_id: str) -> str | None:
         """Get cached title if it exists"""
-        return self.redis_str.get(f"title:{video_id}")
+        return self.redis_str.get(f"video:{video_id}:title")
 
     def cache_audio(self, video_id: str, audio_data: bytes, max_retries: int = 3):
         """Cache audio data with automatic LRU eviction"""
         for attempt in range(max_retries):
             try:
-                self.redis.set(f"audio:{video_id}", value=audio_data)
+                self.redis.set(f"video:{video_id}:audio", value=audio_data)
                 log.info(f"Cached audio for video {video_id}")
                 return
             except redis.exceptions.ResponseError as e:
@@ -64,7 +64,7 @@ class AudioCache:
         """Cache title with automatic LRU eviction"""
         for attempt in range(max_retries):
             try:
-                self.redis_str.set(f"title:{video_id}", value=title)
+                self.redis_str.set(f"video:{video_id}:title", value=title)
                 return
             except redis.exceptions.ResponseError as e:
                 if "OOM command not allowed" in str(e):

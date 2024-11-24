@@ -10,15 +10,43 @@ from src.activities import Activities
 from src.bot import QuartzBot
 
 rich_handler = RichHandler(
-    console=Console(width=100),
+    console=Console(width=120),
     markup=True,
     rich_tracebacks=True,
     enable_link_path=False,
+    tracebacks_show_locals=True,
 )
 
 logging.basicConfig(level="INFO", format="%(message)s", datefmt="[%X]", handlers=[rich_handler])
 
 log = logging.getLogger("rich")
+
+
+async def main():
+    bot = QuartzBot()
+    # Set up signal handlers
+    loop = asyncio.get_running_loop()
+    signals = (signal.SIGTERM, signal.SIGINT)
+    for sig in signals:
+        loop.add_signal_handler(
+            sig, lambda captured_sig=sig: asyncio.create_task(shutdown(captured_sig, loop, bot))
+        )
+
+    # Get token from environment
+    token = os.getenv("DISCORD_TOKEN")
+    if not token:
+        raise ValueError("No Discord token found. Set DISCORD_TOKEN environment variable.")
+
+    try:
+        async with bot:
+            await bot.start(token)
+    except KeyboardInterrupt:
+        log.info("Received keyboard interrupt")
+    except asyncio.CancelledError:
+        # This is expected during shutdown, we can safely ignore it
+        log.info("[bold bright_green]Shutdown completed successfully![/]")
+    except Exception as e:
+        log.exception("Unexpected error during shutdown: %s", e)
 
 
 async def shutdown(signal, loop, bot):
@@ -51,6 +79,9 @@ async def shutdown(signal, loop, bot):
             # Wait briefly for cleanup
             await asyncio.sleep(1)
 
+            # Close database connection
+            await bot.db.close()
+
             # Close bot connection
             await bot.close()
 
@@ -65,33 +96,6 @@ async def shutdown(signal, loop, bot):
     await asyncio.gather(*tasks, return_exceptions=True)
 
     loop.stop()
-
-
-async def main():
-    bot = QuartzBot()
-    # Set up signal handlers
-    loop = asyncio.get_running_loop()
-    signals = (signal.SIGTERM, signal.SIGINT)
-    for sig in signals:
-        loop.add_signal_handler(
-            sig, lambda captured_sig=sig: asyncio.create_task(shutdown(captured_sig, loop, bot))
-        )
-
-    # Get token from environment
-    token = os.getenv("DISCORD_TOKEN")
-    if not token:
-        raise ValueError("No Discord token found. Set DISCORD_TOKEN environment variable.")
-
-    try:
-        async with bot:
-            await bot.start(token)
-    except KeyboardInterrupt:
-        log.info("Received keyboard interrupt")
-    except asyncio.CancelledError:
-        # This is expected during shutdown, we can safely ignore it
-        log.info("[bold bright_green]Shutdown completed successfully![/]")
-    except Exception as e:
-        log.exception("Unexpected error during shutdown: %s", e)
 
 
 if __name__ == "__main__":

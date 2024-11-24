@@ -3,7 +3,6 @@ import logging
 from discord import Client, Interaction, app_commands, ui
 from discord.ext import commands
 
-from src.activities import Activities
 from src.cogs.text.views import DynamicButton
 
 log = logging.getLogger(__name__)
