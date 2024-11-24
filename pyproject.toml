@@ -63,6 +63,13 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
 
+[tool.ruff.lint.isort]
+# Combines as imports on the same line.
+combine-as-imports = true
+
+# Force import from statements with multiple members and at least one alias
+force-wrap-aliases = true
+
 
 [tool.ruff.format]
 # Like Black, use double quotes for strings.
