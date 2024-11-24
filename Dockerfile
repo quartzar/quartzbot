@@ -33,3 +33,6 @@ RUN pip install uv \
 
 # Copy source code
 COPY src/ src/
+
+# Run the application
+CMD ["python", "-m", "src.main"]
