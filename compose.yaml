@@ -16,7 +16,9 @@ services:
     depends_on:
       cache:
         condition: service_healthy
-    command: python -m src.main --guild
+    stop_signal: SIGINT
+    stop_grace_period: 10s
+    init: true
 
   cache:
     image: registry.redict.io/redict:7-alpine
@@ -29,8 +31,10 @@ services:
       - "6379"
     healthcheck:
       test: [ "CMD", "redict-cli", "ping" ]
-      interval: 5s
-      timeout: 1s
+      start_interval: 1s
+      start_period: 10s
+      interval: 30s
+      timeout: 3s
       retries: 5
     command: >
       redict-server 
