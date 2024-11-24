@@ -2,9 +2,19 @@ import asyncio
 import logging
 from datetime import datetime
 
-from discord import Activity, ActivityType, Client, Intents, Member, User, abc, app_commands
-from discord import errors as dc_errors
+from discord import (
+    Client,
+    Intents,
+    Interaction,
+    Member,
+    User,
+    abc,
+    app_commands,
+    errors as dc_errors,
+)
+from discord.app_commands import Command, ContextMenu
 
+from src.activities import Activities
 from src.reloader import CogReloader
 
 log = logging.getLogger(__name__)
@@ -12,7 +22,6 @@ log = logging.getLogger(__name__)
 
 class QuartzBot(Client):
     def __init__(self):
-        self.cogs = {}
         intents = Intents.default()
         intents.message_content = True
         intents.voice_states = True
@@ -37,20 +46,18 @@ class QuartzBot(Client):
 
     async def on_ready(self):
         """Called when the bot is ready and connected"""
-        await self.change_presence(
-            activity=Activity(type=ActivityType.watching, name="the crystals grow")
-        )
+        await self.change_presence(**Activities.default())
         log.info("[bold bright_green]quartzbot is ready![/]")
 
     async def sync_commands(self):
         """Sync commands to all guilds the bot is in"""
         total_commands = len(list(self.tree.walk_commands()))
-        log.info("Syncing commands...")
 
+        log.info("Syncing commands...")
         try:
             # Sync to all guilds the bot is in
             async for guild in self.fetch_guilds():
-                log.info("Syncing commands to guild: %s", guild.name)
+                log.info("Syncing commands to guild: [bold underline]%s[/]", guild.name)
                 self.tree.clear_commands(guild=guild)
                 self.tree.copy_global_to(guild=guild)
                 synced = await self.tree.sync(guild=guild)
@@ -70,12 +77,6 @@ class QuartzBot(Client):
         except Exception as e:
             log.exception(f"[red]Unexpected error syncing commands: {e}[/]")
 
-    async def on_typing(self, channel: abc.Messageable, user: User | Member, when: datetime):
-        """Called when a user starts typing in a channel"""
-        log.info("%s is typing in %s", user, channel)
-        # Send a message to the channel the user is typing in
-        await channel.send(f"{user.mention} is typing...")
-
     async def on_guild_join(self, guild):
         """Called when the bot joins a guild"""
         log.info(
@@ -83,3 +84,19 @@ class QuartzBot(Client):
             guild.name,
         )
         await self.reloader.load_cogs()
+
+    @staticmethod
+    async def on_app_command_completion(interaction: Interaction, command: Command | ContextMenu):
+        """Called when an app command is completed"""
+        log.info(
+            "Command [underline]%s[/] completed with interaction [underline]%s[/]",
+            command.name,
+            interaction,
+        )
+
+    @staticmethod
+    async def on_typing(channel: abc.Messageable, user: User | Member, when: datetime):
+        """Called when a user starts typing in a channel"""
+        log.info("%s is typing in %s", user, channel)
+        # Send a message to the channel the user is typing in
+        await channel.send(f"{user.mention} is typing...")

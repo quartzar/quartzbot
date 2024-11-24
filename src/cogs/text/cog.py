@@ -1,7 +1,10 @@
 import logging
 
-from discord import Client, Interaction, app_commands
+from discord import Client, Interaction, app_commands, ui
 from discord.ext import commands
+
+from src.activities import Activities
+from src.cogs.text.views import DynamicButton
 
 log = logging.getLogger(__name__)
 
@@ -34,3 +37,41 @@ class TextCog(commands.Cog):
         await interaction.response.send_message(f"{greeting_type}, {name}! Terrible to meet you!")
 
     """"""
+
+    # @app_commands.command()
+    # async def presence(self, interaction: Interaction):
+    #     # activity = Activity(type=ActivityType.streaming, name="the crystals grow")
+    #     # streaming = discord.Streaming(name="the crystals grow", url="https://www.youtube.com/watch?v=B1rmDe4Kfic", platform="YouTube", detail="blah blah")
+    #     # await self.bot.change_presence(activity=streaming)
+    #
+    #     # activity = Activity(type=ActivityType.custom, name="the crystals grow", url="https://www.youtube.com/watch?v=B1rmDe4Kfic")
+    #     # activity = discord.CustomActivity(name="the crystals grow", url="https://www.youtube.com/watch?v=B1rmDe4Kfic")
+    #
+    #     # activity = discord.Streaming(name="bob ross", url="https://www.youtube.com/watch?v=B1rmDe4Kfic", platform="YouTube", created_at=datetime.now())
+    #     # activity = Activity(
+    #     #     name="the crystals grow",
+    #     #     url="https://www.youtube.com/watch?v=B1rmDe4Kfic",
+    #     #     platform="YouTube",
+    #     #     created_at=datetime.now(),
+    #     # )
+    #     # activity = Activity(
+    #     #     type=ActivityType.playing,
+    #     #     name="YouTube Music",
+    #     #     state=f"Playing the song",
+    #     #     details="via quartzbot",
+    #     #     timestamps={
+    #     #         "start": 1621234567,
+    #     #         "end": 1621235567
+    #     #     },
+    #     #     url="https://www.youtube.com/watch?v=B1rmDe4Kfic"
+    #     # )
+    #     await self.bot.change_presence(**Activities.shutdown())
+
+    @app_commands.command()
+    async def dynamic_button(self, interaction: Interaction):
+        """Create a dynamic button"""
+
+        view = ui.View(timeout=None)
+        view.add_item(DynamicButton(interaction.user.id))
+
+        await interaction.response.send_message("Here is your button", view=view)

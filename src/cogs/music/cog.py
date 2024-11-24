@@ -11,7 +11,8 @@ from discord import (
     FFmpegOpusAudio,
     File,
     Interaction,
-    Streaming,
+    VoiceClient,
+    VoiceProtocol,
     app_commands,
 )
 from discord.ext import commands
@@ -326,7 +327,7 @@ class MusicCog(commands.Cog):
 
             # Connect to voice
             voice_channel = interaction.user.voice.channel
-            voice_client = interaction.guild.voice_client
+            voice_client: VoiceClient | VoiceProtocol = interaction.guild.voice_client
 
             if voice_client is None:
                 voice_client = await voice_channel.connect()
@@ -369,10 +370,10 @@ class MusicCog(commands.Cog):
 
             await interaction.followup.send(embed=embed)
             # activity = Activity(type=Streaming, name=yt.title, url=yt.watch_url, details=yt.description, buttons=[{"label": "Watch", "url": yt.watch_url}])
-            activity = Streaming(
-                name=yt.title, url=yt.watch_url, platform="YouTube", details=yt.description
-            )
-            await self.bot.change_presence(activity=activity)
+            # activity = Streaming(
+            #     name=yt.title, url=yt.watch_url, platform="YouTube", details=yt.description
+            # )
+            # await self.bot.change_presence(activity=activity)
 
             # await interaction.followup.send(
             #     f"[**`Now playing:`** **__`{yt.title}`__**]({yt.embed_url})\n"
