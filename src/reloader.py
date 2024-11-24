@@ -3,8 +3,9 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from discord import Activity, ActivityType
 from watchfiles import awatch
+
+from src.activities import Activities
 
 if TYPE_CHECKING:
     from src.bot import QuartzBot
@@ -97,8 +98,7 @@ class CogReloader:
 
                 log.info("[yellow]Detected changes in %s, reloading...[/]", cog_name)
 
-                activity = Activity(type=ActivityType.custom, name=f"Loading cog {cog_name}")
-                await self.bot.change_presence(activity=activity)
+                await self.bot.change_presence(**Activities.cog_reload(cog_name=cog_name))
 
                 try:
                     await self.load_cog(cog_name)
@@ -107,3 +107,6 @@ class CogReloader:
 
                 except Exception as e:
                     log.exception(f"[red]Failed to reload {cog_name}: {str(e)}[/]")
+
+                finally:
+                    await self.bot.change_presence(**Activities.default())
