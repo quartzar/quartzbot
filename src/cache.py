@@ -6,7 +6,7 @@ from typing import Any
 
 import redis
 
-log = logging.getLogger("rich")
+log = logging.getLogger(__name__)
 
 
 class AudioCache:

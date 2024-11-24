@@ -1,15 +1,19 @@
 import importlib
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from discord import Client, Object
+from discord import Activity, ActivityType
 from watchfiles import awatch
+
+if TYPE_CHECKING:
+    from src.bot import QuartzBot
 
 log = logging.getLogger(__name__)
 
 
 class CogReloader:
-    def __init__(self, bot: Client, cog_path: str = "src/cogs"):
+    def __init__(self, bot: "QuartzBot", cog_path: str = "src/cogs"):
         self.bot = bot
         self.cog_path = Path(cog_path)
         self.watching = False
@@ -21,8 +25,6 @@ class CogReloader:
         try:
             # Clear all commands first
             self.bot.tree.clear_commands(guild=None)
-            if self.bot.guild_id:
-                self.bot.tree.clear_commands(guild=Object(id=self.bot.guild_id))
 
             # Get all cog directories
             cog_dirs = [
@@ -33,17 +35,12 @@ class CogReloader:
             for cog_dir in cog_dirs:
                 await self.load_cog(cog_dir.name)
 
-            # Copy global commands to guild if needed
-            if self.bot.guild_id:
-                self.bot.tree.copy_global_to(guild=Object(id=self.bot.guild_id))
-                await self.bot.tree.sync(guild=Object(id=self.bot.guild_id))
-            else:
-                await self.bot.tree.sync()
-
+            # Sync commands to all guilds
+            await self.bot.sync_commands()
             log.info("[green]All cogs loaded and commands synced[/]")
 
         except Exception as e:
-            log.error(f"[red]Failed to load cogs: {str(e)}[/]")
+            log.exception(f"[red]Failed to load cogs: {str(e)}[/]")
             raise
 
     async def load_cog(self, cog_name: str) -> None:
@@ -72,10 +69,10 @@ class CogReloader:
 
             # Store cog reference
             self.cogs[cog_name] = cog
-            log.info(f"[green]Loaded cog: {cog_name}[/]")
+            log.info("[green]Loaded cog %s[/]", cog_name)
 
         except Exception as e:
-            log.error(f"[red]Failed to load cog {cog_name}: {str(e)}[/]")
+            log.exception("[red]Failed to load cog %s: %s[/]", cog_name, str(e))
             raise
 
     async def start_watching(self) -> None:
@@ -84,25 +81,29 @@ class CogReloader:
             return
 
         self.watching = True
-        log.info(f"[yellow]Starting file watcher for {self.cog_path}[/]")
+        log.info("[yellow]Starting file watcher for %s[/]", self.cog_path)
 
         async for changes in awatch(self.cog_path):
             for change_type, file_path in changes:
                 path = Path(file_path)
-                if path.suffix == ".py" and not path.name.startswith("__"):
-                    cog_name = path.parent.name
-                    if cog_name in self.cogs:
-                        log.info(f"[yellow]Detected changes in {cog_name}, reloading...[/]")
-                        try:
-                            await self.load_cog(cog_name)
 
-                            # Resync commands after reload
-                            if self.bot.guild_id:
-                                self.bot.tree.copy_global_to(guild=Object(id=self.bot.guild_id))
-                                await self.bot.tree.sync(guild=Object(id=self.bot.guild_id))
-                            else:
-                                await self.bot.tree.sync()
+                if path.suffix != ".py" and path.name.startswith("__"):
+                    continue
 
-                            log.info(f"[green]Successfully reloaded {cog_name}[/]")
-                        except Exception as e:
-                            log.error(f"[red]Failed to reload {cog_name}: {str(e)}[/]")
+                cog_name = path.parent.name
+
+                if cog_name not in self.cogs:
+                    continue
+
+                log.info("[yellow]Detected changes in %s, reloading...[/]", cog_name)
+
+                activity = Activity(type=ActivityType.custom, name=f"Loading cog {cog_name}")
+                await self.bot.change_presence(activity=activity)
+
+                try:
+                    await self.load_cog(cog_name)
+                    await self.bot.sync_commands()
+                    log.info(f"[green]Successfully reloaded {cog_name}[/]")
+
+                except Exception as e:
+                    log.exception(f"[red]Failed to reload {cog_name}: {str(e)}[/]")

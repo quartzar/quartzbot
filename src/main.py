@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-from argparse import ArgumentParser, Namespace
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -21,16 +20,10 @@ log = logging.getLogger("rich")
 
 
 async def main():
-    args = parse_args()
-    guild_id = None
-
-    # Check if guild mode was enabled
-    if args.guild:
-        log.info("[blue]Guild mode enabled[/]")
-        guild_id = os.getenv("GUILD_ID")
+    # args = parse_args()
 
     # Create bot instance
-    bot = QuartzBot(guild_id=guild_id)
+    bot = QuartzBot()
 
     # Get token from environment
     token = os.getenv("DISCORD_TOKEN")
@@ -42,17 +35,17 @@ async def main():
         await bot.start(token)
 
 
-def parse_args() -> Namespace:
-    parser = ArgumentParser(description="quartzbot - A Discord bot for managing crystals")
-    parser.add_argument(
-        "--guild",
-        "-g",
-        help="Sync commands to guild specified by GUILD_ID in .env file instead of globally",
-        action="store_true",
-        default=False,
-    )
-
-    return parser.parse_args()
+# def parse_args() -> Namespace:
+#     parser = ArgumentParser(description="quartzbot - A Discord bot for managing crystals")
+#     parser.add_argument(
+#         "--guild",
+#         "-g",
+#         help="Sync commands to guild specified by GUILD_ID in .env file instead of globally",
+#         action="store_true",
+#         default=False,
+#     )
+#
+#     return parser.parse_args()
 
 
 if __name__ == "__main__":

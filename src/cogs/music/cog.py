@@ -11,6 +11,7 @@ from discord import (
     FFmpegOpusAudio,
     File,
     Interaction,
+    Streaming,
     app_commands,
 )
 from discord.ext import commands
@@ -367,6 +368,11 @@ class MusicCog(commands.Cog):
             )
 
             await interaction.followup.send(embed=embed)
+            # activity = Activity(type=Streaming, name=yt.title, url=yt.watch_url, details=yt.description, buttons=[{"label": "Watch", "url": yt.watch_url}])
+            activity = Streaming(
+                name=yt.title, url=yt.watch_url, platform="YouTube", details=yt.description
+            )
+            await self.bot.change_presence(activity=activity)
 
             # await interaction.followup.send(
             #     f"[**`Now playing:`** **__`{yt.title}`__**]({yt.embed_url})\n"
