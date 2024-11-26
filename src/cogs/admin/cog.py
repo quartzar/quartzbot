@@ -7,6 +7,8 @@ import os
 from discord import Client, Interaction, app_commands
 from discord.ext.commands import Cog
 
+from src.models import PersistentMessage
+
 log = logging.getLogger(__name__)
 
 
@@ -24,6 +26,28 @@ class AdminCog(Cog):
     def __init__(self, bot: Client):
         self.bot = bot
         self._watcher_task = None
+
+    @app_commands.command()
+    @is_owner()
+    async def check_persistent(self, interaction: Interaction):
+        """Check current persistent message configuration"""
+        config = await PersistentMessage.get_or_none(
+            channel__id=interaction.channel_id, guild__id=interaction.guild_id
+        ).prefetch_related("message", "channel", "guild")
+
+        if config:
+            await interaction.response.send_message(
+                f"Current config:\n"
+                f"Guild: {config.guild.name} ({config.guild.id})\n"
+                f"Channel: {config.channel.name} ({config.channel.id})\n"
+                f"Message: {config.message.id}\n"
+                f"Last updated: {config.last_updated}",
+                ephemeral=False,
+            )
+        else:
+            await interaction.response.send_message(
+                "No persistent message configured for this channel", ephemeral=False
+            )
 
     @app_commands.command()
     async def get_database_models(self, interaction: Interaction):

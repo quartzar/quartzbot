@@ -33,35 +33,13 @@ class Channel(Model):
         }
 
 
-class Message(Model):
-    id = fields.BigIntField(primary_key=True)
-    content = fields.TextField()
-    channel = fields.ForeignKeyField(
-        "models.Channel", related_name="messages", on_delete=fields.CASCADE
-    )
-    created_at = fields.DatetimeField(auto_now_add=True)
-
-    def __str__(self):
-        return (
-            "Message with ID: %(id)d from channel: %(channel)s in guild: %(guild)s was created at: %(created_at)s"
-            % {
-                "id": self.id,
-                "channel": self.channel.name,
-                "guild": self.channel.guild.name,
-                "created_at": self.created_at,
-            }
-        )
-
-
 class PersistentMessage(Model):
+    message_id = fields.BigIntField()
     guild = fields.ForeignKeyField(
         "models.Guild", related_name="persistent_message", on_delete=fields.CASCADE
     )
     channel = fields.ForeignKeyField(
         "models.Channel", related_name="persistent_message", on_delete=fields.CASCADE
-    )
-    message = fields.ForeignKeyField(
-        "models.Message", related_name="persistent_message", on_delete=fields.CASCADE
     )
     created_at = fields.DatetimeField(auto_now_add=True)
     last_updated = fields.DatetimeField(auto_now=True)
@@ -75,6 +53,6 @@ class PersistentMessage(Model):
             % {
                 "guild": self.guild.name,
                 "channel": self.channel.name,
-                "message": self.message.id,
+                "message": self.message_id,
             }
         )

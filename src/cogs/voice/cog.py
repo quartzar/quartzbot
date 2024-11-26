@@ -13,6 +13,9 @@ class VoiceCog(commands.Cog):
     @app_commands.command()
     async def join(self, interaction: Interaction):
         """Join the user's voice channel"""
+        await self.__join(interaction)
+
+    async def __join(self, interaction: Interaction):
         if not interaction.user.voice:
             await interaction.response.send_message(
                 "you twit, get in a voice channel first!", ephemeral=False

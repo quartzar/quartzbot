@@ -1,16 +1,20 @@
 import asyncio
 import logging
+from typing import cast
 
 from discord import (
     Client,
     Intents,
     Interaction,
+    Message,
     app_commands,
     errors as dc_errors,
 )
 from discord.app_commands import Command, ContextMenu
 
 from src.activities import Activities
+from src.cogs.dashboard.cog import DashboardCog
+from src.cogs.dashboard.views import DashboardView
 from src.database import Database
 from src.reloader import CogReloader
 
@@ -21,6 +25,7 @@ class QuartzBot(Client):
     def __init__(self):
         intents = Intents.default()
         intents.message_content = True
+        intents.messages = True
         intents.voice_states = True
 
         super().__init__(intents=intents)
@@ -44,6 +49,11 @@ class QuartzBot(Client):
         # Set up database and generate schemas
         await self.db.init()
 
+        # Add the dashboard view (if dashboard cog is loaded)
+        if "dashboard" in self.reloader.cogs:
+            log.info("Adding dashboard view...")
+            self.add_view(DashboardView(self))
+
         # Start watching for changes
         asyncio.create_task(self.reloader.start_watching())
 
@@ -51,6 +61,13 @@ class QuartzBot(Client):
         """Called when the bot is ready and connected"""
         await self.change_presence(**Activities.default())
         log.info("[bold bright_green]quartzbot is ready![/]")
+
+        # Update the dashboard, if exists and PersistentMessage set for guild
+        from typing import cast
+
+        if dashboard_cog := cast(DashboardCog, self.reloader.cogs.get("dashboard")):
+            log.info("Updating dashboard...")
+            await dashboard_cog.dashboard_load()
 
     async def sync_commands(self):
         """Sync commands to all guilds the bot is in"""
@@ -97,6 +114,25 @@ class QuartzBot(Client):
             f"➞ Guild:   [bold]{interaction.guild.name}[/] ({interaction.guild.id})\n"
             f"➞ Channel: [bold]{interaction.channel.name}[/] ({interaction.channel.id})"
         )
+
+    async def on_message(self, message: Message):
+        """Called when a message is sent in any channel"""
+        log.info("[dim italic]New message: %s", message.content)
+
+        # Get dashboard cog and check message
+        if dashboard_cog := cast(DashboardCog, self.reloader.cogs["dashboard"]):
+            await dashboard_cog.check_message(message)
+
+    async def on_message_delete(self, message: Message):
+        """Called when a message is deleted in any channel"""
+        # Get dashboard cog and check message
+        log.info("[dim italic]Message deleted: %s", message.content)
+        if message.author.id == self.user.id:
+            log.info("[dim italic]Ignoring message delete from self")
+            return
+        #
+        if dashboard_cog := cast(DashboardCog, self.reloader.cogs["dashboard"]):
+            await dashboard_cog.check_message(message, was_deleted=True)
 
     # @staticmethod
     # async def on_typing(channel: abc.Messageable, user: User | Member, when: datetime):

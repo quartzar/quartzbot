@@ -176,15 +176,18 @@ class MusicCog(commands.Cog):
 
         except Exception as e:
             await interaction.followup.send(
-                f"An error occurred: {str(e)}",
+                f"An error occurred: ```\n{str(e)}\n```",
             )
-            log.error(f"An error occurred during [underline]/play[/] command: {e}")
+            log.exception(f"An error occurred during [underline]/play[/] command: {e}")
 
     """"""
 
     @app_commands.command()
     async def skip(self, interaction: Interaction):
         """Skip current song"""
+        await self.__skip(interaction)
+
+    async def __skip(self, interaction: Interaction):
         if not interaction.guild.voice_client:
             await interaction.response.send_message(
                 "Nothing is playing!",

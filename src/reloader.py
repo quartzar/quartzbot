@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import logging
 from pathlib import Path
@@ -85,7 +86,7 @@ class CogReloader:
         log.info("[yellow]Starting file watcher for %s[/]", self.cog_path)
 
         async for changes in awatch(self.cog_path):
-            for change_type, file_path in changes:
+            for _, file_path in changes:
                 path = Path(file_path)
 
                 if path.suffix != ".py" and path.name.startswith("__"):
@@ -99,6 +100,7 @@ class CogReloader:
                 log.info("[yellow]Detected changes in %s, reloading...[/]", cog_name)
 
                 await self.bot.change_presence(**Activities.cog_reload(cog_name=cog_name))
+                await asyncio.sleep(0.5)
 
                 try:
                     await self.load_cog(cog_name)

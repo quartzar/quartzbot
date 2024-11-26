@@ -14,7 +14,7 @@ rich_handler = RichHandler(
     markup=True,
     rich_tracebacks=True,
     enable_link_path=False,
-    tracebacks_show_locals=True,
+    tracebacks_show_locals=False,
 )
 
 logging.basicConfig(level="INFO", format="%(message)s", datefmt="[%X]", handlers=[rich_handler])
