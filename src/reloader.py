@@ -45,8 +45,10 @@ class CogReloader:
             log.exception(f"[red]Failed to load cogs: {str(e)}[/]")
             raise
 
-    async def load_cog(self, cog_name: str) -> None:
+    async def load_cog(self, cog_name: str, kwargs=None) -> None:
         """Load a single cog"""
+        if kwargs is None:
+            kwargs = {}
         try:
             # Import and reload the module
             module = importlib.import_module(f"src.cogs.{cog_name}.cog")
@@ -62,7 +64,7 @@ class CogReloader:
                 self.registered_commands[cog_name].clear()
 
             # Create new cog instance and store commands
-            cog = cog_class(self.bot)
+            cog = cog_class(self.bot, **kwargs)
             self.registered_commands[cog_name] = {cmd.name for cmd in cog.__cog_app_commands__}
 
             # Add new commands
@@ -103,7 +105,18 @@ class CogReloader:
                 await asyncio.sleep(0.5)
 
                 try:
-                    await self.load_cog(cog_name)
+                    # If this is MusicCog, we want to retain state of MusicCog.currently_playing,
+                    # and MusicCog.queue, and pass both as args to the new instance
+                    kwargs = {}
+                    # if cog_name == "music":
+                    #     if music_cog := self.cogs.get("music"):
+                    #         # construct dictionary of args that can be accessed like args.get('currently_playing'):
+                    #         kwargs = {
+                    #             "currently_playing": music_cog.currently_playing,
+                    #             "queue": deque(music_cog.queue),
+                    #         }
+
+                    await self.load_cog(cog_name, kwargs)
                     await self.bot.sync_commands()
                     log.info(f"[green]Successfully reloaded {cog_name}[/]")
 

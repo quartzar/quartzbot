@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 
 
 class VoiceCog(commands.Cog):
-    def __init__(self, bot: Client):
+    def __init__(self, bot: Client, **kwargs):
         self.bot = bot
 
     @app_commands.command()

@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class DashboardCog(commands.Cog):
-    def __init__(self, bot: "QuartzBot"):
+    def __init__(self, bot: "QuartzBot", **kwargs):
         self.bot = bot
         self.view = DashboardView(bot)
         self._locks = {}

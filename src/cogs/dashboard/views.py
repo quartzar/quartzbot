@@ -104,7 +104,7 @@ class DashboardView(View):
             embed.set_image(url=yt.thumbnail_url)
             if music_cog.queue:
                 next_up = "\n".join(
-                    f"{i+1}. {item.title}" for i, item in enumerate(list(music_cog.queue)[:3])
+                    f"{i + 1}. {item.title}" for i, item in enumerate(list(music_cog.queue)[:3])
                 )
                 embed.add_field(name="Queue", value=next_up or "Empty", inline=False)
         else:

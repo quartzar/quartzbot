@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 class TextCog(commands.Cog):
-    def __init__(self, bot: Client):
+    def __init__(self, bot: Client, **kwargs):
         self.bot = bot
 
     """"""
