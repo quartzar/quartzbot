@@ -18,6 +18,7 @@ from discord import (
 from discord.ext import commands
 from pytubefix import Search, YouTube
 
+from src.activities import Activities
 from src.cache import AudioCache
 from src.cogs.music.views import SongSelector
 from src.utils import QueueItem, human_time_duration
@@ -30,12 +31,12 @@ log = logging.getLogger(__name__)
 
 
 class MusicCog(commands.Cog):
-    def __init__(self, bot: Client):
+    def __init__(self, bot: Client, **kwargs):
         self.bot = bot
         self.cache = AudioCache()
         self.download_progress = {}
-        self.queue = deque()
-        self.currently_playing = None
+        self.currently_playing = kwargs.get("currently_playing", None)
+        self.queue = kwargs.get("queue", deque())
 
     """"""
 
@@ -62,6 +63,7 @@ class MusicCog(commands.Cog):
         if not video_id:
             # Didn't get a URL, search instead and get first 5 results
             search = Search(url)
+
             results = search.videos[:7]
 
             if not results:
@@ -118,7 +120,7 @@ class MusicCog(commands.Cog):
                 # Download directly to temp directory for initial download
                 stream = yt.streams.filter(only_audio=True).order_by("abr").desc().first()
                 log.info(f"Highest quality audio stream found: {stream}")
-                temp_download_path = os.path.join(self.cache.temp_dir, f"download_{video_id}.m4a")
+                temp_download_path = os.path.join(self.cache.temp_dir, f"download_{video_id}")
 
                 # Initialise progress tracking
                 self.download_progress[video_id] = {
@@ -159,12 +161,21 @@ class MusicCog(commands.Cog):
             position = len(self.queue)
 
             # If nothing is playing, start playback
-            if not self.currently_playing:
+            voice_channel = interaction.user.voice.channel
+            voice_client: VoiceClient | VoiceProtocol = interaction.guild.voice_client
+            if not self.currently_playing or not voice_client.is_playing():
                 await self.play_next(interaction)
             else:
-                await interaction.followup.send(
-                    f"Added to queue (position {position}): {title}",
+                await interaction.edit_original_response(
+                    content=f"> __{title}__ *added to queue at position* **{position}**",
+                    embed=None,
+                    view=None,
                 )
+                # remove original search results embed/view w/e, just want the above text:
+
+                # await interaction.followup.send(
+                #     f"Added to queue (position {position}): {title}",
+                # )
 
             # Send the file if user requested it
             if give_me_file:
@@ -198,6 +209,7 @@ class MusicCog(commands.Cog):
             "Skipping current song",
         )
         await self.terminate_playback(interaction.guild.voice_client)
+        await self.play_next(interaction)
 
     """"""
 
@@ -213,11 +225,11 @@ class MusicCog(commands.Cog):
         queue_text = []
         if self.currently_playing:
             queue_text.append(
-                f"🎵 Now Playing: {self.currently_playing.title} (requested by {self.currently_playing.requested_by})"
+                f"🎵  Now Playing: __{self.currently_playing.title}__ `(requested by {self.currently_playing.requested_by})`"
             )
 
         if self.queue:
-            queue_text.append("\n📋 Queue:")
+            queue_text.append("\n📋 __queue__")
             for i, item in enumerate(self.queue, 1):
                 queue_text.append(f"{i}. {item.title} (requested by {item.requested_by})")
 
@@ -353,6 +365,7 @@ class MusicCog(commands.Cog):
                 # Schedule playing the next song
                 asyncio.run_coroutine_threadsafe(self.play_next(interaction), self.bot.loop)
 
+            # Play the audio file
             voice_client.play(
                 FFmpegOpusAudio(temp_playback_path, **FFMPEG_OPTIONS),
                 after=after_playing,
@@ -360,18 +373,59 @@ class MusicCog(commands.Cog):
 
             yt = YouTube(url=queue_item.url)
 
+            # Construct the embed
             embed = Embed(
-                title=f"Now Playing: __{yt.title}__",
+                title=yt.title,
                 description=f"**Author:** {yt.author}\n"
                 f"**Length:** {human_time_duration(yt.length)}\n"
-                f"**Uploaded:** {str(yt.publish_date).split(" ")[0]}\n"
-                f"**Views:** {yt.views}\n"
-                f"[]({yt.embed_url}",
+                f"**Uploaded:** {str(yt.publish_date).split(' ')[0]}\n"
+                f"**Views:** {yt.views:,}\n",
                 color=Color.green(),
                 url=yt.embed_url,
+                timestamp=interaction.created_at,
             )
 
+            # youtube_logo_url = "https://png.pngtree.com/png-clipart/20221018/ourmid/pngtree-youtube-social-media-3d-stereo-png-image_6308427.png"
+            embed.set_thumbnail(url=yt.thumbnail_url)
+
+            # Get the requester info
+            requester = interaction.guild.get_member_named(queue_item.requested_by)
+            embed.set_footer(
+                text=f"Requested by {queue_item.requested_by}",
+                icon_url=requester.display_avatar.url,
+            )
+            # embed.set_author(name=requester.display_name, url=f"https://discord.com/users/{requester.id}", icon_url=requester.display_avatar.url)
+            embed.set_author(
+                name="Now Playing",
+                icon_url="https://cdn-icons-png.flaticon.com/512/10181/10181264.png",
+            )
+
+            # filename = f"{queue_item.video_id}_thumbnail.jpg"
+            # thumbnail = await download_image_from_url(url=yt.thumbnail_url)
+            # file = File(thumbnail, filename=filename)
+            # embed.set_image(url=f"attachment://{filename}")
+
+            # set embed video to the YouTube video:
+            # embed.video
+
+            # embed.set_image(url=f"attachment://{filename}")
+            # requester = interaction.guild.get_member_named(queue_item.requested_by)
+            # embed.set_footer(text=f"Requested by {queue_item.requested_by}", icon_url=requester.display_avatar.url)
+            # embed.set_thumbnail(url=f"attachment://{filename}")
+            # # get the person who requested the song from queue_item and generate a link to their Discord:
+            # embed.set_author(name=requester.display_name, url=f"https://discord.com/users/{requester.id}", icon_url=requester.display_avatar.url)
+
             await interaction.followup.send(embed=embed)
+
+            await self.bot.change_presence(
+                **Activities.youtube(
+                    title=yt.title,
+                    url=yt.watch_url,
+                    author=yt.author,
+                    application_id=self.bot.application_id,
+                )
+            )
+
             # activity = Activity(type=Streaming, name=yt.title, url=yt.watch_url, details=yt.description, buttons=[{"label": "Watch", "url": yt.watch_url}])
             # activity = Streaming(
             #     name=yt.title, url=yt.watch_url, platform="YouTube", details=yt.description
