@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import signal
 
 from discord import Client, Interaction, app_commands
 from discord.ext.commands import Cog
@@ -23,7 +24,7 @@ def is_owner():
 
 
 class AdminCog(Cog):
-    def __init__(self, bot: Client):
+    def __init__(self, bot: Client, **kwargs):
         self.bot = bot
         self._watcher_task = None
 
@@ -144,3 +145,28 @@ class AdminCog(Cog):
         await interaction.response.send_message(
             f"Autoreload is currently **{status}**", ephemeral=True
         )
+
+    @app_commands.command(name="restart", description="ADMIN ONLY: Restart the bot process")
+    @is_owner()
+    async def restart(self, interaction: Interaction):
+        """Trigger a full bot restart by sending SIGINT to the process.
+
+        In Docker (compose.yaml uses restart: unless-stopped with stop_signal SIGINT),
+        this will gracefully shut down and the container will automatically restart.
+        """
+        try:
+            # Acknowledge first so Discord gets the response before we stop
+            await interaction.response.send_message("🔁 Restarting bot...", ephemeral=True)
+        except Exception:
+            # If initial response already sent or failed, try followup
+            try:
+                await interaction.followup.send("🔁 Restarting bot...", ephemeral=True)
+            except Exception:
+                pass
+
+        async def _delayed_kill():
+            # Small delay to ensure the acknowledgment is delivered
+            await asyncio.sleep(1)
+            os.kill(os.getpid(), signal.SIGINT)
+
+        asyncio.create_task(_delayed_kill())
