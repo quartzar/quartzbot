@@ -1,4 +1,5 @@
 [project]
+name = "quartzbot"
 requires-python = ">=3.12"
 
 
