@@ -5,6 +5,7 @@ from discord import ButtonStyle, Color, Embed, Interaction, Message, ui
 from discord.ui import Button, View
 from pytubefix import YouTube
 
+from src.cogs.music.views import SongSearchModal
 from src.utils import QueueItem
 
 if TYPE_CHECKING:
@@ -45,18 +46,33 @@ class DashboardView(View):
     async def skip(self, interaction: Interaction, button: Button):
         """Skip current track"""
         if music_cog := self.bot.reloader.cogs["music"]:
-            await music_cog.skip(interaction)
+            print(type(music_cog))
+            await music_cog._skip(interaction)
         else:
             return await interaction.response.send_message(
                 "Music system not available", ephemeral=False
             )
+
+    # search for song modal
+    @ui.button(label="𝗦𝗘𝗔𝗥𝗖𝗛", style=ButtonStyle.success, custom_id="dashboard:search")
+    async def search(self, interaction: Interaction, button: Button):
+        """Search for a song to play
+
+        Uses the :class:`SongSearchModal` to search for a song
+        """
+        if music_cog := self.bot.reloader.cogs["music"]:
+            await interaction.response.send_modal(SongSearchModal(music_cog, interaction))
+        else:
+            await interaction.response.send_message("Music system not available", ephemeral=False)
 
     # join
     @ui.button(label="𝗝𝗢𝗜𝗡", style=ButtonStyle.primary, custom_id="dashboard:join")
     async def join(self, interaction: Interaction, button: Button):
         """Join the user's voice channel"""
         if voice_cog := self.bot.reloader.cogs["voice"]:
-            await voice_cog.__join(interaction)
+            await voice_cog._join(interaction)
+        else:
+            await interaction.response.send_message("Voice system not available", ephemeral=False)
 
     @ui.button(label="𝗥𝗘𝗙𝗥𝗘𝗦𝗛", style=ButtonStyle.secondary, custom_id="dashboard:refresh")
     async def refresh(self, interaction: Interaction, button: Button):

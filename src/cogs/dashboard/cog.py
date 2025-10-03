@@ -191,13 +191,13 @@ class DashboardCog(commands.Cog):
                             log.warning("Message %s not found in channel", message_id)
 
                 except discord.InvalidData as e:
-                    log.error("Invalid data fetching channel: %s", e)
+                    log.exception("Invalid data fetching channel: %s", e)
                 except discord.NotFound as e:
                     log.error("Channel not found for PersistentMessage: %s", e)
                 except discord.Forbidden as e:
                     log.error("Forbidden fetching channel: %s", e)
                 except discord.HTTPException as e:
-                    log.error("HTTP error fetching channel: %s", e)
+                    log.exception("HTTP error fetching channel: %s", e)
                 except Exception as e:
                     log.exception("Unexpected error fetching channel: %s", e)
 

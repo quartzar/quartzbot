@@ -49,7 +49,9 @@ class MusicCog(commands.Cog):
         :param give_me_file: Option for the audio file to be sent on Discord
         """
         log.info(f"Command [underline]/play[/] called with URL: [underline]{url}[/]")
+        await self._play(interaction, url, give_me_file)
 
+    async def _play(self, interaction: Interaction, url: str, give_me_file: bool = False):
         if not interaction.user.voice:
             await interaction.response.send_message(
                 "You need to be in a voice channel first!", ephemeral=False
@@ -196,9 +198,9 @@ class MusicCog(commands.Cog):
     @app_commands.command()
     async def skip(self, interaction: Interaction):
         """Skip current song"""
-        await self.__skip(interaction)
+        await self._skip(interaction)
 
-    async def __skip(self, interaction: Interaction):
+    async def _skip(self, interaction: Interaction):
         if not interaction.guild.voice_client:
             await interaction.response.send_message(
                 "Nothing is playing!",
@@ -454,6 +456,7 @@ class MusicCog(commands.Cog):
             if video_id in self.download_progress:
                 if self.download_progress[video_id]["completed"]:
                     del self.download_progress[video_id]
+                    await asyncio.sleep(0.2)
                     return True
 
             # Check timeout
